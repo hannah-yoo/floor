@@ -234,6 +234,23 @@
       `;
 
       imgWrap.appendChild(overlay);
+
+      // Conditional trait marks (furniture dents / boiler scorch)
+      const thickNum = parseFloat(f[FIELDS.thickness]);
+      const softVal  = f[FIELDS.softness] || "";
+      
+      if (thickNum >= 4.5 && softVal.includes("푹신")) {
+        const mark = document.createElement("div");
+        mark.className = "card-trait-mark mark-dent";
+        mark.textContent = "(가구 찍힘 자국)";
+        imgWrap.appendChild(mark);
+      } else if (thickNum <= 2.2 && thickNum > 0) {
+        const mark = document.createElement("div");
+        mark.className = "card-trait-mark mark-scorch";
+        mark.textContent = "(보일러 그을음 자국)";
+        imgWrap.appendChild(mark);
+      }
+
       card.appendChild(imgWrap);
 
       return card;

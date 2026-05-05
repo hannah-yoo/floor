@@ -101,6 +101,32 @@ body.revealed .card:active {
   transition: opacity 0.6s ease;
 }
 
+/* ── Trait Marks (Conditional overlays for download) ── */
+.card-trait-mark {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.4);
+  color: #fff;
+  font-size: 10px;
+  padding: 2px 5px;
+  border-radius: 3px;
+  z-index: 10;
+  pointer-events: none;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+/* Randomly place them a bit for natural look */
+.mark-dent {
+  bottom: 10px;
+  right: 10px;
+  border: 1px dashed rgba(255,255,255,0.5);
+}
+.mark-scorch {
+  top: 10px;
+  left: 10px;
+  color: #ff9900;
+}
+
+
 /* ── REVEAL STATE ─────────────────────────────────────── */
 body.revealed .card-text-layer {
   opacity: 0;
