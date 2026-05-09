@@ -13,8 +13,9 @@
     content="An archive of fake wood-grain flooring units collected from Korean residential and commercial product lines." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Consolidated to Gothic A1 only -->
   <link
-    href="https://fonts.googleapis.com/css2?family=Monsieur+La+Doulaise&family=Fleur+De+Leah&family=Rouge+Script&family=Mea+Culpa&family=Lobster&family=Gravitas+One&family=Ultra&family=Noto+Sans:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;700&display=swap"
     rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -31,7 +32,7 @@
 
   <!-- Click hint -->
   <div id="click-hint">
-    <span>click anywhere to reveal</span>
+    <span>click anywhere to reveal all</span>
   </div>
 
   <!-- Info Toggle & Panel -->
@@ -44,7 +45,7 @@
       Concept Images: <a href="https://commons.wikimedia.org/" target="_blank">Wikimedia Commons</a><br>
       Developed for: Socio-cultural Design Studio (2026)
     </p>
-    <p style="font-size: 0.65rem; opacity: 0.7;">Clicking the background or tiles triggers a "sweep" reveal of the underlying wood grain.</p>
+    <p style="font-size: 0.65rem; opacity: 0.7;">Click a tile to reveal it individually. Click background for a wave reveal.</p>
   </div>
 
   <!-- Download button -->
@@ -80,7 +81,7 @@
       brand: "출시 회사",
     };
 
-    let isRevealed = false;
+    let isGlobalRevealed = false;
 
     // ─────────────────────────────────────────────────────────────
     // Fetch from Wikimedia Commons
@@ -138,28 +139,42 @@
       const imgWrap = document.createElement("div");
       imgWrap.className = "card-img-wrap";
 
-      // Constant random height base to keep masonry feel but more structured
-      const randomH = Math.floor(Math.random() * 60) + 180;
-      imgWrap.style.minHeight = `${randomH}px`;
-      imgWrap.style.height = `${randomH}px`; // Force height to be constant, ignore text content
-
       const imageAttachments = f[FIELDS.image];
       
+      // Tile height respects image ratio from Airtable
+      if (imageAttachments && imageAttachments.length > 0) {
+        const att = imageAttachments[0];
+        if (att.width && att.height) {
+          imgWrap.style.aspectRatio = `${att.width} / ${att.height}`;
+        } else {
+          imgWrap.style.minHeight = "240px";
+        }
+      } else {
+        const ratios = ["4/5", "3/4", "5/6", "1/1"];
+        imgWrap.style.aspectRatio = ratios[index % ratios.length];
+      }
+
       // 1. Wood Image Layer (Bottom)
       const woodImg = document.createElement("img");
       woodImg.className = "card-wood-img";
       if (imageAttachments && imageAttachments.length > 0) {
         woodImg.src = imageAttachments[0].url;
         woodImg.crossOrigin = "anonymous";
+        woodImg.alt = name;
+        woodImg.loading = "lazy";
+        woodImg.draggable = false;
+        imgWrap.appendChild(woodImg);
       } else {
-        // If no wood image, revealing shows the random color
         const hue = Math.floor(Math.random() * 360);
         woodImg.style.display = "none";
-        imgWrap.style.backgroundColor = `hsl(${hue}, 30%, 20%)`;
+        imgWrap.style.backgroundColor = `hsl(${hue}, 20%, 15%)`;
+        const label = document.createElement("span");
+        label.className = "placeholder-label";
+        label.textContent = "—";
+        imgWrap.appendChild(label);
       }
-      imgWrap.appendChild(woodImg);
 
-      // 2. Concept Image Layer (Top / Dissolvable)
+      // 2. Concept Image Layer (Top)
       const textLayer = document.createElement("div");
       textLayer.className = "card-text-layer";
 
@@ -167,18 +182,16 @@
       conceptImg.className = "card-concept-img";
       conceptImg.alt = name + " concept";
       conceptImg.draggable = false;
-      conceptImg.style.cssText = "width:100%; height:100%; object-fit:cover; display:block; transition:opacity 0.5s ease;";
+      conceptImg.style.cssText = "width:100%; height:100%; object-fit:cover; display:block;";
       textLayer.appendChild(conceptImg);
       imgWrap.appendChild(textLayer);
 
-      // Prioritize Wiki image: Fetch regardless of Airtable image status
       const searchName = f[FIELDS.nameEn] || f[FIELDS.nameKo];
       if (searchName) {
         fetchWikiImage(searchName).then(url => {
           if (url) {
             conceptImg.src = url;
           } else {
-            // Only if NO wiki image is found, show the random color
             conceptImg.style.display = "none";
             const hue = Math.floor(Math.random() * 360);
             textLayer.style.backgroundColor = `hsl(${hue}, 40%, 40%)`;
@@ -186,7 +199,7 @@
         });
       }
 
-      // 3. Hover Overlay (Always Top)
+      // 3. Hover Overlay
       const rows = [
         { label: "한국어명", value: f[FIELDS.nameKo] },
         { label: "시리즈", value: f[FIELDS.series] },
@@ -213,39 +226,28 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Toggle: Reveal with Sweep Animation
+    // Toggle Reveal (Wave effect or Individual)
     // ─────────────────────────────────────────────────────────────
-    function toggleReveal() {
-      isRevealed = !isRevealed;
-      
-      const cards = document.querySelectorAll(".card");
-      cards.forEach((card, i) => {
-        // Trigger sweep up
-        card.classList.remove("sweep-in");
-        void card.offsetWidth; // trigger reflow
-        card.classList.add("sweep-up");
+    function toggleTile(card, forcedState = null) {
+      if (forcedState === true) card.classList.add("is-revealed");
+      else if (forcedState === false) card.classList.remove("is-revealed");
+      else card.classList.toggle("is-revealed");
+    }
 
-        // After sweep up, change state and sweep in
+    function toggleGlobalReveal() {
+      isGlobalRevealed = !isGlobalRevealed;
+      const cards = Array.from(document.querySelectorAll(".card"));
+      
+      // Staggered wave effect
+      cards.forEach((card, i) => {
         setTimeout(() => {
-          if (i === 0) document.body.classList.toggle("revealed", isRevealed);
-          
-          card.classList.remove("sweep-up");
-          void card.offsetWidth;
-          card.classList.add("sweep-in");
-          
-          // Cleanup
-          card.addEventListener("animationend", function cleanup(e) {
-            if (e.animationName === "sweepInAnim") {
-              card.classList.remove("sweep-in");
-              card.removeEventListener("animationend", cleanup);
-            }
-          });
-        }, 300);
+          toggleTile(card, isGlobalRevealed);
+        }, i * 15); // Fast wave
       });
 
       const hint = document.getElementById("click-hint");
       if (hint) {
-        if (isRevealed) hint.classList.add("hidden");
+        if (isGlobalRevealed) hint.classList.add("hidden");
         else hint.classList.remove("hidden");
       }
     }
@@ -307,7 +309,8 @@
             dragSrc.classList.remove("card-dragging");
             clone?.remove(); clone = null; dragSrc = null;
           } else {
-            toggleReveal();
+            // Click tile -> Individual Toggle
+            toggleTile(card);
           }
         }
         window.addEventListener("pointermove", onMove, { passive: false });
@@ -315,8 +318,9 @@
       });
 
       document.body.addEventListener("click", (e) => {
+        // Click background -> Global Staggered Toggle
         if (!e.target.closest(".card") && !e.target.closest("#download-btn") && !e.target.closest("#info-toggle") && !e.target.closest("#info-panel")) {
-          toggleReveal();
+          toggleGlobalReveal();
         }
       });
     }
@@ -335,18 +339,12 @@
       const grid = document.getElementById("grid");
       const loading = document.getElementById("loading");
       
-      // Info Toggle logic
       const infoBtn = document.getElementById("info-toggle");
       const infoPanel = document.getElementById("info-panel");
       infoBtn.onclick = (e) => {
         e.stopPropagation();
         infoPanel.classList.toggle("show");
       };
-      document.body.addEventListener("click", (e) => {
-        if (!e.target.closest("#info-panel") && !e.target.closest("#info-toggle")) {
-          infoPanel.classList.remove("show");
-        }
-      });
 
       try {
         const records = await fetchAirtable();
@@ -355,6 +353,7 @@
         records.forEach((record, i) => {
           if (!record.fields[FIELDS.nameEn] && !record.fields[FIELDS.nameKo]) return;
           const card = buildCard(record, i);
+          
           card.classList.add("sweep-in");
           grid.appendChild(card);
           card.addEventListener("animationend", (e) => {
