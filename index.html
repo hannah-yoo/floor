@@ -3,12 +3,12 @@
   Based on learning from Hongik University Socio-cultural Design Studio, spring semester 2026
   Extended with: Airtable API fetch, masonry grid, hover overlay, pointer drag-to-swap
 -->
-<html lang="ko">
+<html lang="en">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Faux Flooring Archive</title>
+  <title>Faux Flooring and Name Archive</title>
   <meta name="description"
     content="An archive of fake wood-grain flooring units collected from Korean residential and commercial product lines." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -34,8 +34,21 @@
     <span>click anywhere to reveal</span>
   </div>
 
+  <!-- Info Toggle & Panel -->
+  <button id="info-toggle">info</button>
+  <div id="info-panel">
+    <h2>Faux Flooring Archive</h2>
+    <p>This archive explores the aesthetic gap between the luxury names given to commercial flooring and their synthetic reality.</p>
+    <p><strong>Credits:</strong><br>
+      Flooring Data & Images: Korean product lines (LX Hausys, KCC, etc.)<br>
+      Concept Images: <a href="https://commons.wikimedia.org/" target="_blank">Wikimedia Commons</a><br>
+      Developed for: Socio-cultural Design Studio (2026)
+    </p>
+    <p style="font-size: 0.65rem; opacity: 0.7;">Clicking the background or tiles triggers a "sweep" reveal of the underlying wood grain.</p>
+  </div>
+
   <!-- Download button -->
-  <button id="download-btn" title="내 장판 다운로드" aria-label="Download Viewport">
+  <button id="download-btn" title="Download My View" aria-label="Download Viewport">
     <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
       stroke-linejoin="round" viewBox="0 0 24 24">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
@@ -43,16 +56,6 @@
       <line x1="12" y1="15" x2="12" y2="3" />
     </svg>
   </button>
-
-  <!-- Info button for credits -->
-  <button id="info-btn" title="Image credits" aria-label="Show credits">?</button>
-
-  <!-- Credits panel -->
-  <div id="credits-panel">
-    <div class="credits-title">Credits</div>
-    <p><strong>Flooring images:</strong> Airtable community uploads</p>
-    <p><strong>Concept images:</strong> Wikipedia Commons</p>
-  </div>
 
   <script>
     // ─────────────────────────────────────────────────────────────
@@ -77,7 +80,6 @@
       brand: "출시 회사",
     };
 
-    // State: whether we've revealed the wood or not
     let isRevealed = false;
 
     // ─────────────────────────────────────────────────────────────
@@ -85,52 +87,32 @@
     // ─────────────────────────────────────────────────────────────
     async function fetchWikiImage(query) {
       if (!query) return null;
-
       async function search(q) {
-        // Keeping the negative keywords to protect against gross/inappropriate images
         const safeQuery = q + ' -nazi -communism -soviet -ussr -insect -bug -spider -moth -portrait -biography -actor -singer -politician -nude -anatomy -sexual -organ -medical -disease -blood -surgery -flesh -tissue -muscle -person -human -man -woman -author -writer -artist -born -died -death -incategory:"Living people"';
-
-        // Switched back to English Wikipedia for maximum relevance and fast loading
-        // Reduced gsrlimit to 8 to keep the API extremely fast, while still allowing enough variety for random selection
         const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(safeQuery)}&gsrlimit=8&prop=pageimages&format=json&piprop=thumbnail|original&pithumbsize=600&origin=*`;
         try {
           const res = await fetch(url);
           const data = await res.json();
           if (data.query?.pages) {
-            // Filter out pages that don't have an image
             const validPages = Object.values(data.query.pages).filter(p => p.thumbnail?.source || p.original?.source);
-
             if (validPages.length > 0) {
-              // Look specifically for GIFs in the original source URLs
               const gifPages = validPages.filter(p => p.original?.source?.toLowerCase().endsWith('.gif'));
-
               if (gifPages.length > 0) {
-                const randomGif = gifPages[Math.floor(Math.random() * gifPages.length)];
-                return randomGif.original.source; // Use original animated URL
+                return gifPages[Math.floor(Math.random() * gifPages.length)].original.source;
               }
-
-              // Pick a random highly-relevant image
               const randomPage = validPages[Math.floor(Math.random() * validPages.length)];
-              // Prefer the smaller thumbnail to keep load times lightning fast
               return randomPage.thumbnail?.source || randomPage.original?.source;
             }
           }
-        } catch (err) {
-          console.error("Wiki API error:", err);
-        }
+        } catch (err) { console.error("Wiki API error:", err); }
         return null;
       }
-
       let img = await search(query);
       if (img) return img;
-
-      // Fallback 1: Try the last word (usually the species like "Oak")
       const words = query.trim().split(/\s+/);
       if (words.length > 1) {
         img = await search(words[words.length - 1]);
         if (img) return img;
-
-        // Fallback 2: Try the first word (usually the color/modifier like "Wheat")
         img = await search(words[0]);
         if (img) return img;
       }
@@ -148,17 +130,63 @@
       card.className = "card";
       card.dataset.id = record.id;
 
-      // Store data for averaging during download
       card.dataset.density = f[FIELDS.density] || "";
       card.dataset.thickness = f[FIELDS.thickness] || "";
       card.dataset.softness = f[FIELDS.softness] || "";
       card.dataset.series = f[FIELDS.series] || "";
 
-      // Image wrap (also hosts hover overlay)
       const imgWrap = document.createElement("div");
       imgWrap.className = "card-img-wrap";
 
-      // Calculate overlay rows first so we can determine the necessary tile height
+      // Constant random height base to keep masonry feel but more structured
+      const randomH = Math.floor(Math.random() * 60) + 180;
+      imgWrap.style.minHeight = `${randomH}px`;
+      imgWrap.style.height = `${randomH}px`; // Force height to be constant, ignore text content
+
+      const imageAttachments = f[FIELDS.image];
+      
+      // 1. Wood Image Layer (Bottom)
+      const woodImg = document.createElement("img");
+      woodImg.className = "card-wood-img";
+      if (imageAttachments && imageAttachments.length > 0) {
+        woodImg.src = imageAttachments[0].url;
+        woodImg.crossOrigin = "anonymous";
+      } else {
+        // If no wood image, revealing shows the random color
+        const hue = Math.floor(Math.random() * 360);
+        woodImg.style.display = "none";
+        imgWrap.style.backgroundColor = `hsl(${hue}, 30%, 20%)`;
+      }
+      imgWrap.appendChild(woodImg);
+
+      // 2. Concept Image Layer (Top / Dissolvable)
+      const textLayer = document.createElement("div");
+      textLayer.className = "card-text-layer";
+
+      const conceptImg = document.createElement("img");
+      conceptImg.className = "card-concept-img";
+      conceptImg.alt = name + " concept";
+      conceptImg.draggable = false;
+      conceptImg.style.cssText = "width:100%; height:100%; object-fit:cover; display:block; transition:opacity 0.5s ease;";
+      textLayer.appendChild(conceptImg);
+      imgWrap.appendChild(textLayer);
+
+      // Prioritize Wiki image: Fetch regardless of Airtable image status
+      const searchName = f[FIELDS.nameEn] || f[FIELDS.nameKo];
+      if (searchName) {
+        fetchWikiImage(searchName).then(url => {
+          if (url) {
+            conceptImg.src = url;
+          } else {
+            // Only if NO wiki image is found, show the random color
+            conceptImg.style.display = "none";
+            const hue = Math.floor(Math.random() * 360);
+            textLayer.style.backgroundColor = `hsl(${hue}, 40%, 40%)`;
+          }
+        });
+      }
+
+      // 3. Hover Overlay (Always Top)
       const rows = [
         { label: "한국어명", value: f[FIELDS.nameKo] },
         { label: "시리즈", value: f[FIELDS.series] },
@@ -171,130 +199,48 @@
         { label: "무늬 특징", value: f[FIELDS.pattern] },
       ].filter(r => r.value);
 
-      const imageAttachments = f[FIELDS.image];
-      let imgUrl = "";
-
-      if (imageAttachments && imageAttachments.length > 0) {
-        imgUrl = imageAttachments[0].url;
-
-        // Hidden image (shown on reveal)
-        const img = document.createElement("img");
-        img.src = imgUrl;
-        img.crossOrigin = "anonymous";
-        img.alt = name;
-        img.loading = "lazy";
-        img.draggable = false;
-        img.className = "card-wood-img";
-
-        // Load handler for image to calculate aspect ratio
-        img.onload = function() {
-          const aspectRatio = this.naturalWidth / this.naturalHeight;
-          const cardWidth = imgWrap.offsetWidth;
-          const calculatedHeight = cardWidth / aspectRatio;
-          imgWrap.style.height = `${calculatedHeight}px`;
-        };
-
-        imgWrap.appendChild(img);
-
-        // Concept image layer (Wikipedia image)
-        const textLayer = document.createElement("div");
-        textLayer.className = "card-text-layer";
-        textLayer.style.display = "none"; // Hidden by default
-
-        const conceptImg = document.createElement("img");
-        conceptImg.className = "card-concept-img";
-        conceptImg.alt = name + " concept";
-        conceptImg.draggable = false;
-        conceptImg.style.width = "100%";
-        conceptImg.style.height = "100%";
-        conceptImg.style.objectFit = "cover";
-        conceptImg.style.display = "block";
-        conceptImg.style.transition = "opacity 0.5s ease, transform 0.5s ease";
-        textLayer.appendChild(conceptImg);
-
-        imgWrap.appendChild(textLayer);
-
-        // Async fetch and set image
-        const searchName = f[FIELDS.nameEn] || f[FIELDS.nameKo];
-        if (searchName) {
-          fetchWikiImage(searchName).then(url => {
-            if (url) {
-              conceptImg.src = url;
-              textLayer.style.display = "flex"; // Show layer when wiki image loads
-            } else {
-              // Fallback to a solid color if no image found
-              conceptImg.style.display = "none";
-              const hue = Math.floor(Math.random() * 360);
-              textLayer.style.backgroundColor = `hsl(${hue}, 40%, 40%)`;
-              textLayer.style.display = "flex"; // Show color fallback
-            }
-          });
-        }
-
-      } else {
-        const randomH = Math.floor(Math.random() * 100) + 320;
-        const hue = Math.floor(Math.random() * 360);
-        const sat = Math.floor(Math.random() * 40) + 30;
-        const lit = Math.floor(Math.random() * 40) + 40;
-        imgWrap.style.height = `${randomH}px`;
-        imgWrap.style.backgroundColor = `hsl(${hue}, ${sat}%, ${lit}%)`;
-
-        const label = document.createElement("span");
-        label.className = "placeholder-label";
-        label.textContent = "—";
-        imgWrap.appendChild(label);
-      }
-
-      // Hover overlay — ALL info lives here only
       const overlay = document.createElement("div");
       overlay.className = "card-overlay";
-
       overlay.innerHTML = `
         <p class="overlay-title">${name}</p>
         ${f[FIELDS.brand] ? `<p class="overlay-brand">${f[FIELDS.brand]}</p>` : ""}
         ${rows.length > 0 ? `<dl>${rows.map(r => `<dt>${r.label}</dt><dd>${r.value}</dd>`).join("")}</dl>` : ""}
       `;
-
       imgWrap.appendChild(overlay);
 
-      // Conditional trait marks (furniture dents / boiler scorch)
-      const thickNum = parseFloat(f[FIELDS.thickness]);
-      const softVal = f[FIELDS.softness] || "";
-
-      if (thickNum >= 4.5 && softVal.includes("푹신")) {
-        const mark = document.createElement("div");
-        mark.className = "card-trait-mark mark-dent";
-        mark.textContent = "(가구 찍힘 자국)";
-        imgWrap.appendChild(mark);
-      } else if (thickNum <= 2.2 && thickNum > 0) {
-        const mark = document.createElement("div");
-        mark.className = "card-trait-mark mark-scorch";
-        mark.textContent = "(보일러 그을음 자국)";
-        imgWrap.appendChild(mark);
-      }
-
       card.appendChild(imgWrap);
-
       return card;
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Toggle: click to switch between fancy-text and plain-wood
+    // Toggle: Reveal with Sweep Animation
     // ─────────────────────────────────────────────────────────────
     function toggleReveal() {
       isRevealed = !isRevealed;
-      document.body.classList.toggle("revealed", isRevealed);
+      
+      const cards = document.querySelectorAll(".card");
+      cards.forEach((card, i) => {
+        // Trigger sweep up
+        card.classList.remove("sweep-in");
+        void card.offsetWidth; // trigger reflow
+        card.classList.add("sweep-up");
 
-      // Trigger sweep animations on concept images
-      const conceptImages = document.querySelectorAll(".card-concept-img");
-      conceptImages.forEach(img => {
-        if (isRevealed) {
-          img.classList.remove("sweep-concept-out");
-          img.classList.add("sweep-concept-in");
-        } else {
-          img.classList.remove("sweep-concept-in");
-          img.classList.add("sweep-concept-out");
-        }
+        // After sweep up, change state and sweep in
+        setTimeout(() => {
+          if (i === 0) document.body.classList.toggle("revealed", isRevealed);
+          
+          card.classList.remove("sweep-up");
+          void card.offsetWidth;
+          card.classList.add("sweep-in");
+          
+          // Cleanup
+          card.addEventListener("animationend", function cleanup(e) {
+            if (e.animationName === "sweepInAnim") {
+              card.classList.remove("sweep-in");
+              card.removeEventListener("animationend", cleanup);
+            }
+          });
+        }, 300);
       });
 
       const hint = document.getElementById("click-hint");
@@ -305,330 +251,123 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Custom pointer-event drag-to-SWAP
-    // Works with CSS columns masonry by using element swapping
+    // Drag Swap
     // ─────────────────────────────────────────────────────────────
     function initDragSwap(grid) {
-      let dragSrc = null;
-      let clone = null;
-      let startX = 0, startY = 0;
-      let cloneOffX = 0, cloneOffY = 0;
+      let dragSrc = null; let clone = null;
+      let startX = 0, startY = 0; let cloneOffX = 0, cloneOffY = 0;
 
-      // Create floating clone element (appended to body)
       function createClone(card) {
         const rect = card.getBoundingClientRect();
         const c = card.cloneNode(true);
         c.id = "drag-clone";
-        c.style.width = rect.width + "px";
-        c.style.height = rect.height + "px";
-        c.style.left = rect.left + "px";
-        c.style.top = rect.top + "px";
-        // Hide overlay on clone
+        c.style.cssText = `width:${rect.width}px; height:${rect.height}px; left:${rect.left}px; top:${rect.top}px;`;
         const ov = c.querySelector(".card-overlay");
         if (ov) ov.style.opacity = "0";
         document.body.appendChild(c);
         return c;
       }
 
-      function moveClone(e) {
-        if (!clone) return;
-        const cx = (e.clientX ?? e.touches?.[0]?.clientX) - cloneOffX;
-        const cy = (e.clientY ?? e.touches?.[0]?.clientY) - cloneOffY;
-        clone.style.left = cx + "px";
-        clone.style.top = cy + "px";
-      }
-
-      function cardUnder(e) {
-        // Temporarily hide clone so elementFromPoint works
-        if (clone) clone.style.display = "none";
-        const x = e.clientX ?? e.touches?.[0]?.clientX;
-        const y = e.clientY ?? e.touches?.[0]?.clientY;
-        const el = document.elementFromPoint(x, y);
-        if (clone) clone.style.display = "";
-        return el?.closest(".card");
-      }
-
-      function swapCards(a, b) {
-        if (!a || !b || a === b) return;
-        // In a DOM without flex/grid order, we swap nodes directly
-        const parentA = a.parentNode;
-        const parentB = b.parentNode;
-        const nextA = a.nextSibling;
-        const nextB = b.nextSibling;
-
-        if (parentA === parentB) {
-          if (nextA === b) {
-            parentA.insertBefore(b, a);
-          } else if (nextB === a) {
-            parentB.insertBefore(a, b);
-          } else {
-            if (nextA) parentA.insertBefore(b, nextA);
-            else parentA.appendChild(b);
-            if (nextB) parentB.insertBefore(a, nextB);
-            else parentB.appendChild(a);
-          }
-        }
-      }
-
-      // ── Pointer events ───────────────────────────────────────
       grid.addEventListener("pointerdown", e => {
-        // Only primary button / touch
         if (e.pointerType === "mouse" && e.button !== 0) return;
-
+        if (e.target.closest("#info-toggle") || e.target.closest("#info-panel")) return;
+        
         const card = e.target.closest(".card");
         if (!card) return;
 
-        // Ignore clicks on overlay links etc.
+        startX = e.clientX; startY = e.clientY;
         const rect = card.getBoundingClientRect();
-        startX = e.clientX;
-        startY = e.clientY;
-        cloneOffX = e.clientX - rect.left;
-        cloneOffY = e.clientY - rect.top;
+        cloneOffX = e.clientX - rect.left; cloneOffY = e.clientY - rect.top;
 
         let dragStarted = false;
-        const THRESHOLD = 6; // px before drag activates
-
         function onMove(ev) {
-          const dx = ev.clientX - startX;
-          const dy = ev.clientY - startY;
-
-          if (!dragStarted && Math.sqrt(dx * dx + dy * dy) < THRESHOLD) return;
-
+          const dx = ev.clientX - startX; const dy = ev.clientY - startY;
+          if (!dragStarted && Math.sqrt(dx * dx + dy * dy) < 6) return;
           if (!dragStarted) {
-            dragStarted = true;
-            dragSrc = card;
-            card.classList.add("card-dragging");
-            clone = createClone(card);
+            dragStarted = true; dragSrc = card;
+            card.classList.add("card-dragging"); clone = createClone(card);
           }
-
           ev.preventDefault();
-          moveClone(ev);
-
-          // Highlight potential swap target
-          const target = cardUnder(ev);
-          grid.querySelectorAll(".card-ghost").forEach(c => c.classList.remove("card-ghost"));
-          if (target && target !== dragSrc) target.classList.add("card-ghost");
+          if (clone) {
+            clone.style.left = (ev.clientX - cloneOffX) + "px";
+            clone.style.top = (ev.clientY - cloneOffY) + "px";
+          }
         }
 
         function onUp(ev) {
           window.removeEventListener("pointermove", onMove);
           window.removeEventListener("pointerup", onUp);
-
           if (dragStarted) {
-            const target = cardUnder(ev);
+            const target = document.elementFromPoint(ev.clientX, ev.clientY)?.closest(".card");
             if (target && target !== dragSrc) {
-              swapCards(dragSrc, target);
+              const p = dragSrc.parentNode;
+              const nextTarget = target.nextSibling === dragSrc ? target : target.nextSibling;
+              p.insertBefore(dragSrc, nextTarget);
             }
             dragSrc.classList.remove("card-dragging");
-            grid.querySelectorAll(".card-ghost").forEach(c => c.classList.remove("card-ghost"));
-            clone?.remove();
-            clone = null;
-            dragSrc = null;
+            clone?.remove(); clone = null; dragSrc = null;
           } else {
-            // Simple click → toggle text / wood
             toggleReveal();
           }
         }
-
         window.addEventListener("pointermove", onMove, { passive: false });
         window.addEventListener("pointerup", onUp);
       });
 
-      // Also listen on body for clicks outside the grid
       document.body.addEventListener("click", (e) => {
-        if (!e.target.closest(".card") && !e.target.closest("#download-btn")) {
+        if (!e.target.closest(".card") && !e.target.closest("#download-btn") && !e.target.closest("#info-toggle") && !e.target.closest("#info-panel")) {
           toggleReveal();
         }
       });
-
-      // Prevent context menu on long-press mobile
-      grid.addEventListener("contextmenu", e => {
-        if (dragSrc) e.preventDefault();
-      });
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Fetch from Airtable
+    // Init
     // ─────────────────────────────────────────────────────────────
     async function fetchAirtable() {
       const url = `https://api.airtable.com/v0/${AIRTABLE_BASE}/${encodeURIComponent(AIRTABLE_TABLE)}?pageSize=100`;
-      const res = await fetch(url, {
-        headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` }
-      });
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${AIRTABLE_TOKEN}` } });
       if (!res.ok) throw new Error(`Airtable error ${res.status}`);
-      const data = await res.json();
-      return data.records;
+      const data = await res.json(); return data.records;
     }
 
-    // ─────────────────────────────────────────────────────────────
-    // Main
-    // ─────────────────────────────────────────────────────────────
     async function init() {
       const grid = document.getElementById("grid");
       const loading = document.getElementById("loading");
-      const errEl = document.getElementById("error");
-
-      function updateExportTag() {
-        let tag = document.getElementById("export-tag");
-        if (!tag) {
-          tag = document.createElement("div");
-          tag.id = "export-tag";
-          document.body.appendChild(tag);
-        }
-
-        const visibleCards = Array.from(grid.querySelectorAll(".card")).filter(card => {
-          const rect = card.getBoundingClientRect();
-          return rect.top < window.innerHeight && rect.bottom > 0;
-        });
-
-        if (visibleCards.length > 0) {
-          const mode = (arr) => {
-            const counts = {};
-            let maxCount = 0, maxItem = "—";
-            arr.forEach(item => {
-              if (!item) return;
-              counts[item] = (counts[item] || 0) + 1;
-              if (counts[item] > maxCount) {
-                maxCount = counts[item]; maxItem = item;
-              }
-            });
-            return maxItem;
-          };
-
-          let totalThick = 0, countThick = 0;
-          const softnesses = [], densities = [], series = [];
-
-          visibleCards.forEach(c => {
-            const t = parseFloat(c.dataset.thickness);
-            if (!isNaN(t)) { totalThick += t; countThick++; }
-            if (c.dataset.softness) softnesses.push(c.dataset.softness);
-            if (c.dataset.density) densities.push(c.dataset.density);
-            if (c.dataset.series) series.push(c.dataset.series);
-          });
-
-          const avgThick = countThick > 0 ? (totalThick / countThick).toFixed(1) + "mm" : "—";
-          const modeSoft = mode(softnesses);
-          const modeDens = mode(densities);
-          const modeSeri = mode(series);
-
-          tag.innerHTML = `
-            <div class="tag-header">
-              <span class="tag-title">나의 장판 모음</span>
-              <span class="tag-id">MIX ${Date.now().toString().slice(-6)}</span>
-            </div>
-            <div class="tag-body">
-              <div class="tag-row"><strong>평균 두께</strong> <span>${avgThick}</span></div>
-              <div class="tag-row"><strong>주요 푹신함</strong> <span>${modeSoft}</span></div>
-              <div class="tag-row"><strong>주요 밀도</strong> <span>${modeDens}</span></div>
-              <div class="tag-row"><strong>주요 시리즈</strong> <span>${modeSeri}</span></div>
-            </div>
-          `;
-        }
-      }
-
-      // Info button for credits
-      const infoBtn = document.getElementById("info-btn");
-      const creditsPanel = document.getElementById("credits-panel");
-      infoBtn.addEventListener("click", (e) => {
-        e.stopPropagation(); // Don't trigger reveal
-        creditsPanel.classList.toggle("show");
-      });
-
-      // Close credits when clicking outside
-      document.addEventListener("click", (e) => {
-        if (!e.target.closest("#info-btn") && !e.target.closest("#credits-panel")) {
-          creditsPanel.classList.remove("show");
-        }
-      });
-
-      const dlBtn = document.getElementById("download-btn");
-      dlBtn.addEventListener("mouseenter", () => {
-        updateExportTag();
-        const tag = document.getElementById("export-tag");
-        if (tag) tag.classList.add("show");
-      });
-      dlBtn.addEventListener("mouseleave", () => {
-        const tag = document.getElementById("export-tag");
-        if (tag) tag.classList.remove("show");
-      });
-
-      dlBtn.addEventListener("click", async (e) => {
-        e.stopPropagation(); // Don't trigger reveal
-        dlBtn.style.display = "none";
-        document.body.classList.add("capturing");
-
-        const tag = document.getElementById("export-tag");
-        if (tag) {
-          tag.classList.add("show"); // Ensure visible during capture
-          tag.style.transition = "none"; // Disable fade for instant capture
-        }
-
-        try {
-          const canvas = await html2canvas(document.body, {
-            y: window.scrollY,
-            x: 0,
-            width: window.innerWidth,
-            height: window.innerHeight,
-            backgroundColor: "#0a0a0a",
-            useCORS: true,
-            scale: 2
-          });
-          const link = document.createElement("a");
-          link.download = `jangpan-collection-${Date.now()}.jpg`;
-          link.href = canvas.toDataURL("image/jpeg", 0.95);
-          link.click();
-        } catch (err) {
-          console.error("Screenshot failed:", err);
-          alert("다운로드 중 오류가 발생했습니다.");
-        }
-
-        dlBtn.style.display = "flex";
-        document.body.classList.remove("capturing");
-        if (tag) {
-          tag.classList.remove("show");
-          tag.style.transition = "";
+      
+      // Info Toggle logic
+      const infoBtn = document.getElementById("info-toggle");
+      const infoPanel = document.getElementById("info-panel");
+      infoBtn.onclick = (e) => {
+        e.stopPropagation();
+        infoPanel.classList.toggle("show");
+      };
+      document.body.addEventListener("click", (e) => {
+        if (!e.target.closest("#info-panel") && !e.target.closest("#info-toggle")) {
+          infoPanel.classList.remove("show");
         }
       });
 
       try {
         const records = await fetchAirtable();
-
         loading.style.display = "none";
 
         records.forEach((record, i) => {
           if (!record.fields[FIELDS.nameEn] && !record.fields[FIELDS.nameKo]) return;
           const card = buildCard(record, i);
-
-          // Add sweeping animation (all at once)
           card.classList.add("sweep-in");
-          card.style.opacity = "0"; // Start hidden until animation begins
-
-          // Remove the class after animation completes so it doesn't re-trigger when dragging
-          card.addEventListener("animationend", (e) => {
-            if (e.animationName === "sweepInAnim") {
-              card.classList.remove("sweep-in");
-              card.style.opacity = ""; // clean up inline style
-            }
-          });
-
           grid.appendChild(card);
+          card.addEventListener("animationend", (e) => {
+            if (e.animationName === "sweepInAnim") card.classList.remove("sweep-in");
+          });
         });
 
         initDragSwap(grid);
-
       } catch (err) {
         loading.style.display = "none";
-        errEl.style.display = "block";
-        errEl.innerHTML = `
-          <strong>데이터를 불러오지 못했습니다.</strong><br>
-          ${err.message}<br><br>
-          ① Airtable token과 base ID를 확인하세요<br>
-          ② Live Server 또는 GitHub Pages에서 실행하세요 (file:// 불가)
-        `;
         console.error(err);
       }
     }
-
     init();
   </script>
 </body>

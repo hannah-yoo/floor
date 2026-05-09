@@ -60,13 +60,64 @@ body.revealed .card:active {
   cursor: grabbing;
 }
 
+/* ── Info Panel ── */
+#info-toggle {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 1.5rem;
+  width: 3.2rem;
+  height: 3.2rem;
+  background: rgba(240, 237, 232, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(240, 237, 232, 0.2);
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 950;
+  font-family: var(--font-display);
+  font-weight: bold;
+}
+#info-toggle:hover {
+  background: var(--fg);
+  color: var(--bg);
+}
+
+#info-panel {
+  position: fixed;
+  bottom: 5.5rem;
+  left: 1.5rem;
+  width: 320px;
+  background: rgba(10, 10, 10, 0.98);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(240, 237, 232, 0.15);
+  padding: 2rem;
+  z-index: 2000;
+  display: none;
+  font-size: 0.8rem;
+  line-height: 1.7;
+  color: var(--fg-muted);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.8);
+}
+#info-panel.show { display: block; animation: panelFadeIn 0.3s ease-out; }
+@keyframes panelFadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+#info-panel h2 { color: #fff; font-size: 1.1rem; margin-bottom: 1rem; font-family: var(--font-display); font-weight: normal; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0.5rem; }
+#info-panel a { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; transition: color 0.2s; }
+#info-panel a:hover { color: #fff; }
+#info-panel p { margin-bottom: 1rem; }
+#info-panel strong { color: var(--fg); font-weight: 600; }
+
+
+
 /* ── Card image wrap ──────────────────────────────────── */
 .card-img-wrap {
   position: relative;
   width: 100%;
   overflow: hidden;
-  background: #000;
-  border-bottom: 1px solid #111;
+  background: #111;
+  border-bottom: 1px solid #000;
   display: flex;
   flex-direction: column;
 }
@@ -90,7 +141,7 @@ body.revealed .card:active {
 .card-text-layer {
   position: absolute;
   inset: 0;
-  display: none;
+  display: flex;
   align-items: center;
   justify-content: center;
   background: #000;
@@ -135,14 +186,8 @@ body.capturing .card-trait-mark {
 
 /* ── REVEAL STATE ─────────────────────────────────────── */
 body.revealed .card-text-layer {
-  display: flex;
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* When reveal is toggled off, hide textLayer */
-body:not(.revealed) .card-text-layer {
-  display: none;
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* ── CLICK HINT ───────────────────────────────────────── */
@@ -291,30 +336,12 @@ body:not(.revealed) .card-text-layer {
   100% { transform: translateY(0); opacity: 1; }
 }
 
-@keyframes sweepConceptInAnim {
-  0% { transform: translateY(110vh); opacity: 0; }
-  100% { transform: translateY(0); opacity: 1; }
-}
-
-@keyframes sweepConceptOutAnim {
-  0% { transform: translateY(0); opacity: 1; }
-  100% { transform: translateY(-110vh); opacity: 0; }
-}
-
 .sweep-up {
   animation: sweepUpAnim 0.4s cubic-bezier(0.5, 0, 0.2, 1) forwards;
 }
 
 .sweep-in {
   animation: sweepInAnim 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-
-.sweep-concept-in {
-  animation: sweepConceptInAnim 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
-}
-
-.sweep-concept-out {
-  animation: sweepConceptOutAnim 0.4s cubic-bezier(0.5, 0, 0.2, 1) forwards;
 }
 
 /* The floating clone while dragging */
@@ -356,19 +383,23 @@ body:not(.revealed) .card-text-layer {
 }
 
 /* ── Responsive ───────────────────────────────────────── */
-@media (max-width: 1400px) {
-  #grid { columns: 6 150px; }
+@media (max-width: 1600px) {
+  #grid { columns: 6 140px; }
 }
-@media (max-width: 1100px) {
-  #grid { columns: 4 140px; }
+@media (max-width: 1200px) {
+  #grid { columns: 5 140px; }
 }
-@media (max-width: 800px) {
-  #grid { columns: 3 130px; }
+@media (max-width: 900px) {
+  #grid { columns: 4 130px; }
 }
-@media (max-width: 520px) {
-  #grid { columns: 2 120px; }
+@media (max-width: 700px) {
+  #grid { columns: 3 120px; }
+}
+@media (max-width: 480px) {
+  #grid { columns: 2 110px; }
   h1 { font-size: 0.9rem; }
 }
+
 
 /* ── Export Tag (Screenshot Only) ─────────────────────── */
 #export-tag {
@@ -441,72 +472,4 @@ body:not(.revealed) .card-text-layer {
 
 #export-tag .tag-row span {
   color: #444;
-}
-
-/* ── Info Button and Credits Panel ───────────────────── */
-#info-btn {
-  position: fixed;
-  bottom: 1.5rem;
-  left: 1.5rem;
-  width: 3.2rem;
-  height: 3.2rem;
-  border-radius: 0;
-  background: rgba(240, 237, 232, 0.15);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(240, 237, 232, 0.2);
-  color: var(--fg);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 900;
-  transition: all 0.2s ease;
-  font-size: 1.2rem;
-  font-weight: bold;
-  font-family: var(--font-body);
-}
-
-#info-btn:hover {
-  background: var(--fg);
-  color: var(--bg);
-  transform: scale(1.08);
-}
-
-#credits-panel {
-  position: fixed;
-  bottom: 7rem;
-  left: 1.5rem;
-  max-width: 240px;
-  background: rgba(8, 8, 8, 0.95);
-  border: 1px solid rgba(240, 237, 232, 0.2);
-  border-radius: 2px;
-  padding: 1rem;
-  z-index: 890;
-  font-size: 0.75rem;
-  color: var(--fg-muted);
-  line-height: 1.6;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.3s ease;
-  transform: translateY(10px);
-}
-
-#credits-panel.show {
-  opacity: 1;
-  pointer-events: auto;
-  transform: translateY(0);
-}
-
-#credits-panel p {
-  margin: 0 0 0.5rem 0;
-}
-
-#credits-panel .credits-title {
-  font-size: 0.8rem;
-  color: var(--fg);
-  font-weight: 500;
-  margin-bottom: 0.75rem;
-  border-bottom: 1px solid rgba(240, 237, 232, 0.1);
-  padding-bottom: 0.5rem;
 }
