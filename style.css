@@ -34,7 +34,7 @@ html, body {
 }
 
 #grid {
-  columns: 5 160px;
+  columns: 8 140px;
   column-gap: 0;
   padding-top: 0;
 }
@@ -90,7 +90,7 @@ body.revealed .card:active {
 .card-text-layer {
   position: absolute;
   inset: 0;
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   background: #000;
@@ -135,8 +135,14 @@ body.capturing .card-trait-mark {
 
 /* ── REVEAL STATE ─────────────────────────────────────── */
 body.revealed .card-text-layer {
-  opacity: 0;
-  pointer-events: none;
+  display: flex;
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* When reveal is toggled off, hide textLayer */
+body:not(.revealed) .card-text-layer {
+  display: none;
 }
 
 /* ── CLICK HINT ───────────────────────────────────────── */
@@ -285,12 +291,30 @@ body.revealed .card-text-layer {
   100% { transform: translateY(0); opacity: 1; }
 }
 
+@keyframes sweepConceptInAnim {
+  0% { transform: translateY(110vh); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes sweepConceptOutAnim {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-110vh); opacity: 0; }
+}
+
 .sweep-up {
   animation: sweepUpAnim 0.4s cubic-bezier(0.5, 0, 0.2, 1) forwards;
 }
 
 .sweep-in {
   animation: sweepInAnim 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.sweep-concept-in {
+  animation: sweepConceptInAnim 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+}
+
+.sweep-concept-out {
+  animation: sweepConceptOutAnim 0.4s cubic-bezier(0.5, 0, 0.2, 1) forwards;
 }
 
 /* The floating clone while dragging */
@@ -332,8 +356,11 @@ body.revealed .card-text-layer {
 }
 
 /* ── Responsive ───────────────────────────────────────── */
+@media (max-width: 1400px) {
+  #grid { columns: 6 150px; }
+}
 @media (max-width: 1100px) {
-  #grid { columns: 4 150px; }
+  #grid { columns: 4 140px; }
 }
 @media (max-width: 800px) {
   #grid { columns: 3 130px; }
@@ -414,4 +441,72 @@ body.revealed .card-text-layer {
 
 #export-tag .tag-row span {
   color: #444;
+}
+
+/* ── Info Button and Credits Panel ───────────────────── */
+#info-btn {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 1.5rem;
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 0;
+  background: rgba(240, 237, 232, 0.15);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(240, 237, 232, 0.2);
+  color: var(--fg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 900;
+  transition: all 0.2s ease;
+  font-size: 1.2rem;
+  font-weight: bold;
+  font-family: var(--font-body);
+}
+
+#info-btn:hover {
+  background: var(--fg);
+  color: var(--bg);
+  transform: scale(1.08);
+}
+
+#credits-panel {
+  position: fixed;
+  bottom: 7rem;
+  left: 1.5rem;
+  max-width: 240px;
+  background: rgba(8, 8, 8, 0.95);
+  border: 1px solid rgba(240, 237, 232, 0.2);
+  border-radius: 2px;
+  padding: 1rem;
+  z-index: 890;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+  line-height: 1.6;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  transform: translateY(10px);
+}
+
+#credits-panel.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+#credits-panel p {
+  margin: 0 0 0.5rem 0;
+}
+
+#credits-panel .credits-title {
+  font-size: 0.8rem;
+  color: var(--fg);
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(240, 237, 232, 0.1);
+  padding-bottom: 0.5rem;
 }

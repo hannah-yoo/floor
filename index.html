@@ -1,21 +1,25 @@
 <!DOCTYPE html>
 <!--
-  Based on template by Prof. Yuseon Park
-  Hongik University, Design Research Studio, 2026
+  Based on learning from Hongik University Socio-cultural Design Studio, spring semester 2026
   Extended with: Airtable API fetch, masonry grid, hover overlay, pointer drag-to-swap
 -->
 <html lang="ko">
+
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>장판 모아보기 — 장판 아카이브</title>
-  <meta name="description" content="An archive of fake wood-grain flooring units collected from Korean residential and commercial product lines." />
+  <title>Faux Flooring Archive</title>
+  <meta name="description"
+    content="An archive of fake wood-grain flooring units collected from Korean residential and commercial product lines." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Monsieur+La+Doulaise&family=Fleur+De+Leah&family=Rouge+Script&family=Mea+Culpa&family=Lobster&family=Gravitas+One&family=Ultra&family=Noto+Sans:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Monsieur+La+Doulaise&family=Fleur+De+Leah&family=Rouge+Script&family=Mea+Culpa&family=Lobster&family=Gravitas+One&family=Ultra&family=Noto+Sans:wght@400;700&family=Noto+Sans+KR:wght@400;700&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
+
 <body>
 
   <section class="works">
@@ -32,34 +36,45 @@
 
   <!-- Download button -->
   <button id="download-btn" title="내 장판 다운로드" aria-label="Download Viewport">
-    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
+    <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+      stroke-linejoin="round" viewBox="0 0 24 24">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
       <line x1="12" y1="15" x2="12" y2="3" />
     </svg>
   </button>
 
+  <!-- Info button for credits -->
+  <button id="info-btn" title="Image credits" aria-label="Show credits">?</button>
+
+  <!-- Credits panel -->
+  <div id="credits-panel">
+    <div class="credits-title">Credits</div>
+    <p><strong>Flooring images:</strong> Airtable community uploads</p>
+    <p><strong>Concept images:</strong> Wikipedia Commons</p>
+  </div>
+
   <script>
     // ─────────────────────────────────────────────────────────────
     // Config
     // ─────────────────────────────────────────────────────────────
-    const AIRTABLE_TOKEN  = "patMrJnngETB8Srn9.2291fafcbf0c5009f6cd1bb0fb76f64a4186e03dc379d4ef282b70acd6ed3dea";
-    const AIRTABLE_BASE   = "app0gYEl62r82qDqK";
-    const AIRTABLE_TABLE  = "css용 시트";
+    const AIRTABLE_TOKEN = "patMrJnngETB8Srn9.2291fafcbf0c5009f6cd1bb0fb76f64a4186e03dc379d4ef282b70acd6ed3dea";
+    const AIRTABLE_BASE = "app0gYEl62r82qDqK";
+    const AIRTABLE_TABLE = "css용 시트";
 
     const FIELDS = {
-      nameKo:    "장판 이름 (한글)",
-      nameEn:    "장판 이름 (영어)",
-      image:     "사진",
-      unitSize:  "나무판 무늬 유닛 1개 크기",
+      nameKo: "장판 이름 (한글)",
+      nameEn: "장판 이름 (영어)",
+      image: "사진",
+      unitSize: "나무판 무늬 유닛 1개 크기",
       maxRepeat: "똑같은 디자인이 반복되지 않는 최대 크기",
-      density:   "단위무늬당 유닛 밀도",
-      pattern:   "제조사에서 말하는 무늬 특징",
+      density: "단위무늬당 유닛 밀도",
+      pattern: "제조사에서 말하는 무늬 특징",
       thickness: "두께",
-      softness:  "푹신함? 단단함?",
-      purpose:   "장판의 목적",
-      series:    "장판 시리즈 이름",
-      brand:     "출시 회사",
+      softness: "푹신함? 단단함?",
+      purpose: "장판의 목적",
+      series: "장판 시리즈 이름",
+      brand: "출시 회사",
     };
 
     // State: whether we've revealed the wood or not
@@ -70,11 +85,11 @@
     // ─────────────────────────────────────────────────────────────
     async function fetchWikiImage(query) {
       if (!query) return null;
-      
+
       async function search(q) {
         // Keeping the negative keywords to protect against gross/inappropriate images
         const safeQuery = q + ' -nazi -communism -soviet -ussr -insect -bug -spider -moth -portrait -biography -actor -singer -politician -nude -anatomy -sexual -organ -medical -disease -blood -surgery -flesh -tissue -muscle -person -human -man -woman -author -writer -artist -born -died -death -incategory:"Living people"';
-        
+
         // Switched back to English Wikipedia for maximum relevance and fast loading
         // Reduced gsrlimit to 8 to keep the API extremely fast, while still allowing enough variety for random selection
         const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(safeQuery)}&gsrlimit=8&prop=pageimages&format=json&piprop=thumbnail|original&pithumbsize=600&origin=*`;
@@ -84,16 +99,16 @@
           if (data.query?.pages) {
             // Filter out pages that don't have an image
             const validPages = Object.values(data.query.pages).filter(p => p.thumbnail?.source || p.original?.source);
-            
+
             if (validPages.length > 0) {
               // Look specifically for GIFs in the original source URLs
               const gifPages = validPages.filter(p => p.original?.source?.toLowerCase().endsWith('.gif'));
-              
+
               if (gifPages.length > 0) {
-                 const randomGif = gifPages[Math.floor(Math.random() * gifPages.length)];
-                 return randomGif.original.source; // Use original animated URL
+                const randomGif = gifPages[Math.floor(Math.random() * gifPages.length)];
+                return randomGif.original.source; // Use original animated URL
               }
-              
+
               // Pick a random highly-relevant image
               const randomPage = validPages[Math.floor(Math.random() * validPages.length)];
               // Prefer the smaller thumbnail to keep load times lightning fast
@@ -114,7 +129,7 @@
       if (words.length > 1) {
         img = await search(words[words.length - 1]);
         if (img) return img;
-        
+
         // Fallback 2: Try the first word (usually the color/modifier like "Wheat")
         img = await search(words[0]);
         if (img) return img;
@@ -132,7 +147,7 @@
       const card = document.createElement("div");
       card.className = "card";
       card.dataset.id = record.id;
-      
+
       // Store data for averaging during download
       card.dataset.density = f[FIELDS.density] || "";
       card.dataset.thickness = f[FIELDS.thickness] || "";
@@ -142,45 +157,50 @@
       // Image wrap (also hosts hover overlay)
       const imgWrap = document.createElement("div");
       imgWrap.className = "card-img-wrap";
-      
+
       // Calculate overlay rows first so we can determine the necessary tile height
       const rows = [
-        { label: "한국어명",  value: f[FIELDS.nameKo] },
-        { label: "시리즈",    value: f[FIELDS.series] },
-        { label: "용도",      value: f[FIELDS.purpose] },
+        { label: "한국어명", value: f[FIELDS.nameKo] },
+        { label: "시리즈", value: f[FIELDS.series] },
+        { label: "용도", value: f[FIELDS.purpose] },
         { label: "유닛 크기", value: f[FIELDS.unitSize] },
         { label: "반복 최대", value: f[FIELDS.maxRepeat] },
-        { label: "밀도",      value: f[FIELDS.density] },
-        { label: "두께",      value: f[FIELDS.thickness] },
-        { label: "푹신함",    value: f[FIELDS.softness] },
+        { label: "밀도", value: f[FIELDS.density] },
+        { label: "두께", value: f[FIELDS.thickness] },
+        { label: "푹신함", value: f[FIELDS.softness] },
         { label: "무늬 특징", value: f[FIELDS.pattern] },
       ].filter(r => r.value);
 
       const imageAttachments = f[FIELDS.image];
       let imgUrl = "";
-      
+
       if (imageAttachments && imageAttachments.length > 0) {
         imgUrl = imageAttachments[0].url;
-        
-        // Base random height for the masonry look.
-        // If the text description is taller than this, CSS flexbox will automatically stretch the tile!
-        const randomH = Math.floor(Math.random() * 80) + 200;
-        imgWrap.style.minHeight = `${randomH}px`;
-        
+
         // Hidden image (shown on reveal)
         const img = document.createElement("img");
-        img.src     = imgUrl;
+        img.src = imgUrl;
         img.crossOrigin = "anonymous";
-        img.alt     = name;
+        img.alt = name;
         img.loading = "lazy";
         img.draggable = false;
         img.className = "card-wood-img";
+
+        // Load handler for image to calculate aspect ratio
+        img.onload = function() {
+          const aspectRatio = this.naturalWidth / this.naturalHeight;
+          const cardWidth = imgWrap.offsetWidth;
+          const calculatedHeight = cardWidth / aspectRatio;
+          imgWrap.style.height = `${calculatedHeight}px`;
+        };
+
         imgWrap.appendChild(img);
 
         // Concept image layer (Wikipedia image)
         const textLayer = document.createElement("div");
-        textLayer.className = "card-text-layer"; // Reuse class for dissolve animation
-        
+        textLayer.className = "card-text-layer";
+        textLayer.style.display = "none"; // Hidden by default
+
         const conceptImg = document.createElement("img");
         conceptImg.className = "card-concept-img";
         conceptImg.alt = name + " concept";
@@ -193,22 +213,24 @@
         textLayer.appendChild(conceptImg);
 
         imgWrap.appendChild(textLayer);
-        
+
         // Async fetch and set image
         const searchName = f[FIELDS.nameEn] || f[FIELDS.nameKo];
         if (searchName) {
-           fetchWikiImage(searchName).then(url => {
-              if (url) {
-                  conceptImg.src = url;
-              } else {
-                  // Fallback to a solid color if no image found
-                  conceptImg.style.display = "none";
-                  const hue = Math.floor(Math.random() * 360);
-                  textLayer.style.backgroundColor = `hsl(${hue}, 40%, 40%)`;
-              }
-           });
+          fetchWikiImage(searchName).then(url => {
+            if (url) {
+              conceptImg.src = url;
+              textLayer.style.display = "flex"; // Show layer when wiki image loads
+            } else {
+              // Fallback to a solid color if no image found
+              conceptImg.style.display = "none";
+              const hue = Math.floor(Math.random() * 360);
+              textLayer.style.backgroundColor = `hsl(${hue}, 40%, 40%)`;
+              textLayer.style.display = "flex"; // Show color fallback
+            }
+          });
         }
-        
+
       } else {
         const randomH = Math.floor(Math.random() * 100) + 320;
         const hue = Math.floor(Math.random() * 360);
@@ -237,8 +259,8 @@
 
       // Conditional trait marks (furniture dents / boiler scorch)
       const thickNum = parseFloat(f[FIELDS.thickness]);
-      const softVal  = f[FIELDS.softness] || "";
-      
+      const softVal = f[FIELDS.softness] || "";
+
       if (thickNum >= 4.5 && softVal.includes("푹신")) {
         const mark = document.createElement("div");
         mark.className = "card-trait-mark mark-dent";
@@ -263,6 +285,18 @@
       isRevealed = !isRevealed;
       document.body.classList.toggle("revealed", isRevealed);
 
+      // Trigger sweep animations on concept images
+      const conceptImages = document.querySelectorAll(".card-concept-img");
+      conceptImages.forEach(img => {
+        if (isRevealed) {
+          img.classList.remove("sweep-concept-out");
+          img.classList.add("sweep-concept-in");
+        } else {
+          img.classList.remove("sweep-concept-in");
+          img.classList.add("sweep-concept-out");
+        }
+      });
+
       const hint = document.getElementById("click-hint");
       if (hint) {
         if (isRevealed) hint.classList.add("hidden");
@@ -276,8 +310,8 @@
     // ─────────────────────────────────────────────────────────────
     function initDragSwap(grid) {
       let dragSrc = null;
-      let clone   = null;
-      let startX  = 0, startY = 0;
+      let clone = null;
+      let startX = 0, startY = 0;
       let cloneOffX = 0, cloneOffY = 0;
 
       // Create floating clone element (appended to body)
@@ -285,10 +319,10 @@
         const rect = card.getBoundingClientRect();
         const c = card.cloneNode(true);
         c.id = "drag-clone";
-        c.style.width  = rect.width  + "px";
+        c.style.width = rect.width + "px";
         c.style.height = rect.height + "px";
-        c.style.left   = rect.left   + "px";
-        c.style.top    = rect.top    + "px";
+        c.style.left = rect.left + "px";
+        c.style.top = rect.top + "px";
         // Hide overlay on clone
         const ov = c.querySelector(".card-overlay");
         if (ov) ov.style.opacity = "0";
@@ -301,7 +335,7 @@
         const cx = (e.clientX ?? e.touches?.[0]?.clientX) - cloneOffX;
         const cy = (e.clientY ?? e.touches?.[0]?.clientY) - cloneOffY;
         clone.style.left = cx + "px";
-        clone.style.top  = cy + "px";
+        clone.style.top = cy + "px";
       }
 
       function cardUnder(e) {
@@ -319,8 +353,8 @@
         // In a DOM without flex/grid order, we swap nodes directly
         const parentA = a.parentNode;
         const parentB = b.parentNode;
-        const nextA   = a.nextSibling;
-        const nextB   = b.nextSibling;
+        const nextA = a.nextSibling;
+        const nextB = b.nextSibling;
 
         if (parentA === parentB) {
           if (nextA === b) {
@@ -358,7 +392,7 @@
           const dx = ev.clientX - startX;
           const dy = ev.clientY - startY;
 
-          if (!dragStarted && Math.sqrt(dx*dx + dy*dy) < THRESHOLD) return;
+          if (!dragStarted && Math.sqrt(dx * dx + dy * dy) < THRESHOLD) return;
 
           if (!dragStarted) {
             dragStarted = true;
@@ -378,7 +412,7 @@
 
         function onUp(ev) {
           window.removeEventListener("pointermove", onMove);
-          window.removeEventListener("pointerup",   onUp);
+          window.removeEventListener("pointerup", onUp);
 
           if (dragStarted) {
             const target = cardUnder(ev);
@@ -388,7 +422,7 @@
             dragSrc.classList.remove("card-dragging");
             grid.querySelectorAll(".card-ghost").forEach(c => c.classList.remove("card-ghost"));
             clone?.remove();
-            clone   = null;
+            clone = null;
             dragSrc = null;
           } else {
             // Simple click → toggle text / wood
@@ -397,7 +431,7 @@
         }
 
         window.addEventListener("pointermove", onMove, { passive: false });
-        window.addEventListener("pointerup",   onUp);
+        window.addEventListener("pointerup", onUp);
       });
 
       // Also listen on body for clicks outside the grid
@@ -430,9 +464,9 @@
     // Main
     // ─────────────────────────────────────────────────────────────
     async function init() {
-      const grid    = document.getElementById("grid");
+      const grid = document.getElementById("grid");
       const loading = document.getElementById("loading");
-      const errEl   = document.getElementById("error");
+      const errEl = document.getElementById("error");
 
       function updateExportTag() {
         let tag = document.getElementById("export-tag");
@@ -492,6 +526,21 @@
         }
       }
 
+      // Info button for credits
+      const infoBtn = document.getElementById("info-btn");
+      const creditsPanel = document.getElementById("credits-panel");
+      infoBtn.addEventListener("click", (e) => {
+        e.stopPropagation(); // Don't trigger reveal
+        creditsPanel.classList.toggle("show");
+      });
+
+      // Close credits when clicking outside
+      document.addEventListener("click", (e) => {
+        if (!e.target.closest("#info-btn") && !e.target.closest("#credits-panel")) {
+          creditsPanel.classList.remove("show");
+        }
+      });
+
       const dlBtn = document.getElementById("download-btn");
       dlBtn.addEventListener("mouseenter", () => {
         updateExportTag();
@@ -507,7 +556,7 @@
         e.stopPropagation(); // Don't trigger reveal
         dlBtn.style.display = "none";
         document.body.classList.add("capturing");
-        
+
         const tag = document.getElementById("export-tag");
         if (tag) {
           tag.classList.add("show"); // Ensure visible during capture
@@ -532,7 +581,7 @@
           console.error("Screenshot failed:", err);
           alert("다운로드 중 오류가 발생했습니다.");
         }
-        
+
         dlBtn.style.display = "flex";
         document.body.classList.remove("capturing");
         if (tag) {
@@ -549,11 +598,11 @@
         records.forEach((record, i) => {
           if (!record.fields[FIELDS.nameEn] && !record.fields[FIELDS.nameKo]) return;
           const card = buildCard(record, i);
-          
+
           // Add sweeping animation (all at once)
           card.classList.add("sweep-in");
           card.style.opacity = "0"; // Start hidden until animation begins
-          
+
           // Remove the class after animation completes so it doesn't re-trigger when dragging
           card.addEventListener("animationend", (e) => {
             if (e.animationName === "sweepInAnim") {
@@ -561,7 +610,7 @@
               card.style.opacity = ""; // clean up inline style
             }
           });
-          
+
           grid.appendChild(card);
         });
 
@@ -569,7 +618,7 @@
 
       } catch (err) {
         loading.style.display = "none";
-        errEl.style.display   = "block";
+        errEl.style.display = "block";
         errEl.innerHTML = `
           <strong>데이터를 불러오지 못했습니다.</strong><br>
           ${err.message}<br><br>
@@ -583,4 +632,5 @@
     init();
   </script>
 </body>
+
 </html>
