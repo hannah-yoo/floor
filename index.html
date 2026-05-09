@@ -13,7 +13,6 @@
     content="An archive of fake wood-grain flooring units collected from Korean residential and commercial product lines." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Consolidated to Gothic A1 only -->
   <link
     href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@400;700&display=swap"
     rel="stylesheet">
@@ -42,10 +41,9 @@
     <p>This archive explores the aesthetic gap between the luxury names given to commercial flooring and their synthetic reality.</p>
     <p><strong>Credits:</strong><br>
       Flooring Data & Images: Korean product lines (LX Hausys, KCC, etc.)<br>
-      Concept Images: <a href="https://commons.wikimedia.org/" target="_blank">Wikimedia Commons</a><br>
-      Developed for: Socio-cultural Design Studio (2026)
+      Concept Images: <a href="https://commons.wikimedia.org/" target="_blank">Wikimedia Commons</a>
     </p>
-    <p style="font-size: 0.65rem; opacity: 0.7;">Click a tile to reveal it individually. Click background for a wave reveal.</p>
+    <p style="font-size: 0.65rem; opacity: 0.7;">Click any tile to sweep away all concept images. Drag tiles to reorder.</p>
   </div>
 
   <!-- Download button -->
@@ -54,7 +52,7 @@
       stroke-linejoin="round" viewBox="0 0 24 24">
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" y2="3" />
+      <line x1="12" y1="15" x2="12" x2="3" />
     </svg>
   </button>
 
@@ -84,40 +82,27 @@
     let isGlobalRevealed = false;
 
     // ─────────────────────────────────────────────────────────────
-    // Fetch from Wikimedia Commons
+    // Fetch multiple images from Wikimedia Commons
     // ─────────────────────────────────────────────────────────────
-    async function fetchWikiImage(query) {
-      if (!query) return null;
-      async function search(q) {
-        const safeQuery = q + ' -nazi -communism -soviet -ussr -insect -bug -spider -moth -portrait -biography -actor -singer -politician -nude -anatomy -sexual -organ -medical -disease -blood -surgery -flesh -tissue -muscle -person -human -man -woman -author -writer -artist -born -died -death -incategory:"Living people"';
-        const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(safeQuery)}&gsrlimit=8&prop=pageimages&format=json&piprop=thumbnail|original&pithumbsize=600&origin=*`;
-        try {
-          const res = await fetch(url);
-          const data = await res.json();
-          if (data.query?.pages) {
-            const validPages = Object.values(data.query.pages).filter(p => p.thumbnail?.source || p.original?.source);
-            if (validPages.length > 0) {
-              const gifPages = validPages.filter(p => p.original?.source?.toLowerCase().endsWith('.gif'));
-              if (gifPages.length > 0) {
-                return gifPages[Math.floor(Math.random() * gifPages.length)].original.source;
-              }
-              const randomPage = validPages[Math.floor(Math.random() * validPages.length)];
-              return randomPage.thumbnail?.source || randomPage.original?.source;
-            }
+    async function fetchWikiImages(query, limit = 3) {
+      if (!query) return [];
+      const safeQuery = query + ' -nazi -communism -soviet -ussr -insect -bug -spider -moth -portrait -biography -actor -singer -politician -nude -anatomy -sexual -organ -medical -disease -blood -surgery -flesh -tissue -muscle -person -human -man -woman -author -writer -artist -born -died -death -incategory:"Living people"';
+      const url = `https://en.wikipedia.org/w/api.php?action=query&generator=search&gsrsearch=${encodeURIComponent(safeQuery)}&gsrlimit=12&prop=pageimages&format=json&piprop=thumbnail|original&pithumbsize=600&origin=*`;
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.query?.pages) {
+          const validPages = Object.values(data.query.pages)
+            .filter(p => p.thumbnail?.source || p.original?.source);
+          
+          if (validPages.length > 0) {
+            // Shuffle to get varied results
+            validPages.sort(() => Math.random() - 0.5);
+            return validPages.slice(0, limit).map(p => p.thumbnail?.source || p.original?.source);
           }
-        } catch (err) { console.error("Wiki API error:", err); }
-        return null;
-      }
-      let img = await search(query);
-      if (img) return img;
-      const words = query.trim().split(/\s+/);
-      if (words.length > 1) {
-        img = await search(words[words.length - 1]);
-        if (img) return img;
-        img = await search(words[0]);
-        if (img) return img;
-      }
-      return null;
+        }
+      } catch (err) { console.error("Wiki API error:", err); }
+      return [];
     }
 
     // ─────────────────────────────────────────────────────────────
@@ -140,11 +125,12 @@
       imgWrap.className = "card-img-wrap";
 
       const imageAttachments = f[FIELDS.image];
+      let aspectRatio = 1.0;
       
-      // Tile height respects image ratio from Airtable
       if (imageAttachments && imageAttachments.length > 0) {
         const att = imageAttachments[0];
         if (att.width && att.height) {
+          aspectRatio = att.width / att.height;
           imgWrap.style.aspectRatio = `${att.width} / ${att.height}`;
         } else {
           imgWrap.style.minHeight = "240px";
@@ -152,9 +138,10 @@
       } else {
         const ratios = ["4/5", "3/4", "5/6", "1/1"];
         imgWrap.style.aspectRatio = ratios[index % ratios.length];
+        aspectRatio = 0.8;
       }
 
-      // 1. Wood Image Layer (Bottom)
+      // 1. Wood Image Layer (Bottom - STABLE)
       const woodImg = document.createElement("img");
       woodImg.className = "card-wood-img";
       if (imageAttachments && imageAttachments.length > 0) {
@@ -174,32 +161,35 @@
         imgWrap.appendChild(label);
       }
 
-      // 2. Concept Image Layer (Top)
+      // 2. Concept Image Layer (Top - SWEEPABLE)
       const textLayer = document.createElement("div");
       textLayer.className = "card-text-layer";
-
-      const conceptImg = document.createElement("img");
-      conceptImg.className = "card-concept-img";
-      conceptImg.alt = name + " concept";
-      conceptImg.draggable = false;
-      conceptImg.style.cssText = "width:100%; height:100%; object-fit:cover; display:block;";
-      textLayer.appendChild(conceptImg);
       imgWrap.appendChild(textLayer);
+
+      // Determine how many images to stack based on aspect ratio
+      let stackCount = 1;
+      if (aspectRatio < 0.35) stackCount = 3;
+      else if (aspectRatio < 0.65) stackCount = 2;
 
       const searchName = f[FIELDS.nameEn] || f[FIELDS.nameKo];
       if (searchName) {
-        fetchWikiImage(searchName).then(url => {
-          if (url) {
-            conceptImg.src = url;
+        fetchWikiImages(searchName, stackCount).then(urls => {
+          if (urls.length > 0) {
+            urls.forEach(url => {
+              const cImg = document.createElement("img");
+              cImg.src = url;
+              cImg.style.cssText = `width:100%; height:${100/urls.length}%; object-fit:cover; display:block;`;
+              cImg.draggable = false;
+              textLayer.appendChild(cImg);
+            });
           } else {
-            conceptImg.style.display = "none";
             const hue = Math.floor(Math.random() * 360);
             textLayer.style.backgroundColor = `hsl(${hue}, 40%, 40%)`;
           }
         });
       }
 
-      // 3. Hover Overlay
+      // 3. Hover Overlay (Only visible in revealed state)
       const rows = [
         { label: "한국어명", value: f[FIELDS.nameKo] },
         { label: "시리즈", value: f[FIELDS.series] },
@@ -226,23 +216,17 @@
     }
 
     // ─────────────────────────────────────────────────────────────
-    // Toggle Reveal (Wave effect or Individual)
+    // Toggle Reveal (Wave effect or All-at-once)
     // ─────────────────────────────────────────────────────────────
-    function toggleTile(card, forcedState = null) {
-      if (forcedState === true) card.classList.add("is-revealed");
-      else if (forcedState === false) card.classList.remove("is-revealed");
-      else card.classList.toggle("is-revealed");
-    }
-
     function toggleGlobalReveal() {
       isGlobalRevealed = !isGlobalRevealed;
       const cards = Array.from(document.querySelectorAll(".card"));
       
-      // Staggered wave effect
       cards.forEach((card, i) => {
         setTimeout(() => {
-          toggleTile(card, isGlobalRevealed);
-        }, i * 15); // Fast wave
+          if (isGlobalRevealed) card.classList.add("is-revealed");
+          else card.classList.remove("is-revealed");
+        }, i * 12); 
       });
 
       const hint = document.getElementById("click-hint");
@@ -272,7 +256,7 @@
 
       grid.addEventListener("pointerdown", e => {
         if (e.pointerType === "mouse" && e.button !== 0) return;
-        if (e.target.closest("#info-toggle") || e.target.closest("#info-panel")) return;
+        if (e.target.closest("#info-toggle") || e.target.closest("#info-panel") || e.target.closest("#download-btn")) return;
         
         const card = e.target.closest(".card");
         if (!card) return;
@@ -309,8 +293,8 @@
             dragSrc.classList.remove("card-dragging");
             clone?.remove(); clone = null; dragSrc = null;
           } else {
-            // Click tile -> Individual Toggle
-            toggleTile(card);
+            // Click any tile triggers Global Reveal
+            toggleGlobalReveal();
           }
         }
         window.addEventListener("pointermove", onMove, { passive: false });
@@ -318,7 +302,6 @@
       });
 
       document.body.addEventListener("click", (e) => {
-        // Click background -> Global Staggered Toggle
         if (!e.target.closest(".card") && !e.target.closest("#download-btn") && !e.target.closest("#info-toggle") && !e.target.closest("#info-panel")) {
           toggleGlobalReveal();
         }
@@ -353,7 +336,6 @@
         records.forEach((record, i) => {
           if (!record.fields[FIELDS.nameEn] && !record.fields[FIELDS.nameKo]) return;
           const card = buildCard(record, i);
-          
           card.classList.add("sweep-in");
           grid.appendChild(card);
           card.addEventListener("animationend", (e) => {
