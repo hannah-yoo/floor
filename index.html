@@ -37,13 +37,27 @@
   <!-- Info Toggle & Panel -->
   <button id="info-toggle">info</button>
   <div id="info-panel">
-    <h2>Faux Flooring Archive</h2>
-    <p>This archive explores the aesthetic gap between the luxury names given to commercial flooring and their synthetic reality.</p>
-    <p><strong>Credits:</strong><br>
-      Flooring Data & Images: Korean product lines (LX Hausys, KCC, etc.)<br>
-      Concept Images: <a href="https://commons.wikimedia.org/" target="_blank">Wikimedia Commons</a>
-    </p>
-    <p style="font-size: 0.65rem; opacity: 0.7;">Click any tile to sweep away all concept images. Drag tiles to reorder.</p>
+    <button id="info-close" aria-label="Close panel">&times;</button>
+    <div class="tag-header">
+      <span class="tag-title">ABOUT ARCHIVE</span>
+      <span class="tag-id">INFORMATION</span>
+    </div>
+    <div class="tag-body">
+      <div class="tag-row">
+        <p>This archive explores the aesthetic gap between the luxury names given to commercial flooring and their synthetic reality.</p>
+      </div>
+      <div class="tag-row">
+        <strong>Credits</strong>
+        <span>
+          Flooring Data: LX Hausys, KCC, etc.<br>
+          Images: <a href="https://commons.wikimedia.org/" target="_blank">Wikimedia Commons</a>
+        </span>
+      </div>
+      <div class="tag-row">
+        <strong>Usage</strong>
+        <span>Click tiles to reveal. Drag to reorder.</span>
+      </div>
+    </div>
   </div>
 
   <!-- Download button -->
@@ -167,8 +181,11 @@
       imgWrap.appendChild(textLayer);
 
       // Determine how many images to stack based on aspect ratio
+      // USER REQUEST: allow up to 8 wiki images in a single narrow tile
       let stackCount = 1;
-      if (aspectRatio < 0.35) stackCount = 3;
+      if (aspectRatio < 0.2) stackCount = 8;
+      else if (aspectRatio < 0.3) stackCount = 6;
+      else if (aspectRatio < 0.45) stackCount = 4;
       else if (aspectRatio < 0.65) stackCount = 2;
 
       const searchName = f[FIELDS.nameEn] || f[FIELDS.nameKo];
@@ -233,6 +250,68 @@
       if (hint) {
         if (isGlobalRevealed) hint.classList.add("hidden");
         else hint.classList.remove("hidden");
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────
+    // Export Tag / Download Logic
+    // ─────────────────────────────────────────────────────────────
+    function updateExportTag() {
+      let tag = document.getElementById("export-tag");
+      if (!tag) {
+        tag = document.createElement("div");
+        tag.id = "export-tag";
+        document.body.appendChild(tag);
+      }
+
+      const grid = document.getElementById("grid");
+      const visibleCards = Array.from(grid.querySelectorAll(".card")).filter(card => {
+        const rect = card.getBoundingClientRect();
+        return rect.top < window.innerHeight && rect.bottom > 0;
+      });
+
+      if (visibleCards.length > 0) {
+        const mode = (arr) => {
+          const counts = {};
+          let maxCount = 0, maxItem = "—";
+          arr.forEach(item => {
+            if (!item) return;
+            counts[item] = (counts[item] || 0) + 1;
+            if (counts[item] > maxCount) {
+              maxCount = counts[item]; maxItem = item;
+            }
+          });
+          return maxItem;
+        };
+
+        let totalThick = 0, countThick = 0;
+        const softnesses = [], densities = [], series = [];
+
+        visibleCards.forEach(c => {
+          const t = parseFloat(c.dataset.thickness);
+          if (!isNaN(t)) { totalThick += t; countThick++; }
+          if (c.dataset.softness) softnesses.push(c.dataset.softness);
+          if (c.dataset.density) densities.push(c.dataset.density);
+          if (c.dataset.series) series.push(c.dataset.series);
+        });
+
+        const avgThick = countThick > 0 ? (totalThick / countThick).toFixed(1) + "mm" : "—";
+        const modeSoft = mode(softnesses);
+        const modeDens = mode(densities);
+        const modeSeri = mode(series);
+
+        tag.innerHTML = `
+          <div class="tag-header">
+            <span class="tag-title">나의 장판 모음</span>
+            <span class="tag-id">MIX ${Date.now().toString().slice(-6)}</span>
+          </div>
+          <div class="tag-body">
+            <div class="tag-row"><strong>평균 두께</strong> <span>${avgThick}</span></div>
+            <div class="tag-row"><strong>주요 푹신함</strong> <span>${modeSoft}</span></div>
+            <div class="tag-row"><strong>주요 밀도</strong> <span>${modeDens}</span></div>
+            <div class="tag-row"><strong>주요 시리즈</strong> <span>${modeSeri}</span></div>
+          </div>
+        `;
       }
     }
 
@@ -322,12 +401,69 @@
       const grid = document.getElementById("grid");
       const loading = document.getElementById("loading");
       
+      // Info Panel logic
       const infoBtn = document.getElementById("info-toggle");
       const infoPanel = document.getElementById("info-panel");
+      const infoClose = document.getElementById("info-close");
+
       infoBtn.onclick = (e) => {
         e.stopPropagation();
         infoPanel.classList.toggle("show");
       };
+      infoClose.onclick = (e) => {
+        e.stopPropagation();
+        infoPanel.classList.remove("show");
+      };
+
+      // Download logic
+      const dlBtn = document.getElementById("download-btn");
+      dlBtn.addEventListener("mouseenter", () => {
+        updateExportTag();
+        const tag = document.getElementById("export-tag");
+        if (tag) tag.classList.add("show");
+      });
+      dlBtn.addEventListener("mouseleave", () => {
+        const tag = document.getElementById("export-tag");
+        if (tag) tag.classList.remove("show");
+      });
+
+      dlBtn.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        dlBtn.style.display = "none";
+        infoBtn.style.display = "none";
+        
+        const tag = document.getElementById("export-tag");
+        if (tag) {
+          tag.classList.add("show");
+          tag.style.transition = "none";
+        }
+
+        try {
+          const canvas = await html2canvas(document.body, {
+            y: window.scrollY,
+            x: 0,
+            width: window.innerWidth,
+            height: window.innerHeight,
+            backgroundColor: "#0a0a0a",
+            useCORS: true,
+            scale: 2
+          });
+          const link = document.createElement("a");
+          link.download = `jangpan-collection-${Date.now()}.jpg`;
+          link.href = canvas.toDataURL("image/jpeg", 0.95);
+          link.click();
+        } catch (err) {
+          console.error("Screenshot failed:", err);
+          alert("다운로드 중 오류가 발생했습니다.");
+        }
+        
+        dlBtn.style.display = "flex";
+        infoBtn.style.display = "flex";
+        if (tag) {
+          tag.classList.remove("show");
+          tag.style.transition = "";
+        }
+      });
 
       try {
         const records = await fetchAirtable();
