@@ -35,7 +35,7 @@ html, body {
 }
 
 #grid {
-  columns: 8 140px;
+  column-count: 8;
   column-gap: 0;
   padding-top: 0;
 }
@@ -482,21 +482,21 @@ body.capturing .card-trait-mark {
   line-height: 1.8;
 }
 
-/* ── Responsive ───────────────────────────────────────── */
-@media (max-width: 1600px) {
-  #grid { columns: 6 140px; }
-}
-@media (max-width: 1200px) {
-  #grid { columns: 5 140px; }
+/* ── Responsive ─────────────────────────────────────── */
+@media (max-width: 1100px) {
+  #grid { column-count: 6; }
 }
 @media (max-width: 900px) {
-  #grid { columns: 4 130px; }
+  #grid { column-count: 5; }
 }
 @media (max-width: 700px) {
-  #grid { columns: 3 120px; }
+  #grid { column-count: 4; }
 }
-@media (max-width: 480px) {
-  #grid { columns: 2 110px; }
+@media (max-width: 520px) {
+  #grid { column-count: 3; }
+}
+@media (max-width: 380px) {
+  #grid { column-count: 2; }
   h1 { font-size: 0.9rem; }
 }
 
