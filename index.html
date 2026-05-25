@@ -15,6 +15,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="print.css" media="print" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 </head>
 
@@ -589,8 +590,75 @@
         console.error(err);
       }
     }
+
+    // ─────────────────────────────────────────────────────────────
+    // Print Preparation
+    // ─────────────────────────────────────────────────────────────
+    function preparePrintLayout() {
+      const printGrid = document.getElementById("print-flooring-grid");
+      if (!printGrid) return;
+      printGrid.innerHTML = "";
+
+      const grid = document.getElementById("grid");
+      const visibleCards = Array.from(grid.querySelectorAll(".card")).filter(card => {
+        const rect = card.getBoundingClientRect();
+        return rect.top < window.innerHeight && rect.bottom > 0;
+      });
+
+      const N = visibleCards.length;
+      if (N === 0) return;
+
+      // Calculate cols and rows to fit into a square grid
+      let cols = Math.ceil(Math.sqrt(N));
+      let rows = Math.ceil(N / cols);
+      if (cols * (rows - 1) >= N) {
+        rows--;
+      }
+
+      printGrid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      printGrid.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+      visibleCards.forEach(card => {
+        const cell = document.createElement("div");
+        cell.className = "print-grid-cell";
+
+        const imgWrap = card.querySelector(".card-img-wrap");
+        const woodImg = card.querySelector(".card-wood-img");
+
+        if (woodImg && woodImg.style.display !== "none" && woodImg.src) {
+          const img = document.createElement("img");
+          img.src = woodImg.src;
+          cell.appendChild(img);
+        } else if (imgWrap) {
+          cell.style.backgroundColor = imgWrap.style.backgroundColor;
+        }
+        printGrid.appendChild(cell);
+      });
+    }
+
+    window.addEventListener("beforeprint", preparePrintLayout);
+    window.addEventListener("afterprint", () => {
+      const printGrid = document.getElementById("print-flooring-grid");
+      if (printGrid) printGrid.innerHTML = "";
+    });
+
     init();
   </script>
+
+  <!-- Print Layout Container (Hidden on screen) -->
+  <div id="print-container">
+    <svg width="210mm" height="297mm" viewBox="0 0 210 297" style="position: absolute; top: 0; left: 0; width: 210mm; height: 297mm; z-index: 10;">
+      <!-- Top vertical dashed line -->
+      <line x1="105" y1="0" x2="105" y2="148.5" stroke="black" stroke-width="0.5" stroke-dasharray="2 2" />
+      <!-- Middle horizontal dashed line -->
+      <line x1="0" y1="148.5" x2="210" y2="148.5" stroke="black" stroke-width="0.5" stroke-dasharray="2 2" />
+      <!-- Bottom vertical solid line -->
+      <line x1="105" y1="148.5" x2="105" y2="297" stroke="black" stroke-width="0.5" />
+      <!-- Bottom-right diagonal dashed line -->
+      <line x1="105" y1="148.5" x2="210" y2="297" stroke="black" stroke-width="0.5" stroke-dasharray="2 2" />
+    </svg>
+    <div id="print-flooring-grid"></div>
+  </div>
 </body>
 
 </html>
