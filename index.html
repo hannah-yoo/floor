@@ -218,19 +218,18 @@
         const numCols = grid ? (parseInt(window.getComputedStyle(grid).columnCount) || 8) : 8;
         const NUM_COLS = numCols * 2;
 
-        // Column width as % of zone width
-        const colW = 100 / NUM_COLS;
+        // Zone is 105mm × 105mm (fixed in print.css)
+        const ZONE_H_MM = 105;
+
         // Column width in mm (zone width is 105mm)
         const colW_mm = 105 / NUM_COLS;
 
-        // Calculate average aspect ratio of visible tiles, scale it up to be long (aspect ratio 6 to 10)
+        // Calculate average aspect ratio of visible tiles, scale it up to be long
         let totalAR = 0;
-        tiles.forEach(t => {
-          totalAR += t.ar || 2.5;
-        });
+        tiles.forEach(t => { totalAR += t.ar || 2.5; });
         const avgAR = tiles.length > 0 ? (totalAR / tiles.length) : 2.5;
-        
-        // Make the planks as long as possible for a realistic wood plank look
+
+        // Make the planks tall for a realistic wood plank look
         const arFactor = Math.max(avgAR * 2.8, 8.0);
 
         // Plank height in mm
@@ -238,11 +237,15 @@
 
         gridEl.style.cssText = 'position:relative; width:100%; height:100%; overflow:hidden;';
 
-        // Stagger stair offset: 1/4 (0.25) of plank height per column
+        // Stagger stair: each successive column shifts up by 0.25 * plankH, cycling [0, 0.25, 0.5, 0.75]
         const STAIR_STEP = 0.25;
 
-        // We shift columns up by at most 1 plank height, so we need to cover 105mm + plankH_mm
-        const planksNeeded = Math.ceil(105 / plankH_mm) + 2;
+        // Maximum upward shift any column will get (0.75 * plankH for col index 3, 7, 11, 15)
+        const maxStagger_mm = 0.75 * plankH_mm;
+
+        // planksNeeded must cover the full zone height PLUS the maximum stagger shift
+        // so even the most-shifted column reaches the bottom of the zone.
+        const planksNeeded = Math.ceil((ZONE_H_MM + maxStagger_mm) / plankH_mm) + 2;
 
         // Pre-calculate tile selection grid to avoid horizontal, vertical, and diagonal repeats
         const selectedGrid = [];
@@ -250,6 +253,7 @@
           selectedGrid[col] = [];
         }
 
+        // Build a balanced pool: every tile index appears the same number of times (±1)
         const totalCells = NUM_COLS * planksNeeded;
         const pool = [];
         for (let i = 0; i < totalCells; i++) {
@@ -280,57 +284,44 @@
             let chosenIdx = -1;
 
             if (tiles.length > 1) {
-              // 1. Try to find a tile index in the pool that satisfies all adjacency constraints
+              // 1. Full adjacency constraints (vertical + horizontal + diagonal)
               for (let i = poolIdx; i < pool.length; i++) {
                 const t = pool[i];
-                const isVerticalRepeat = row > 0 && selectedGrid[col][row - 1] === t;
-                const isHorizontalRepeat = col > 0 && selectedGrid[col - 1][row] === t;
-                const isDiagLeftRepeat = col > 0 && row > 0 && selectedGrid[col - 1][row - 1] === t;
-                const isDiagRightRepeat = col < NUM_COLS - 1 && row > 0 && selectedGrid[col + 1][row - 1] === t;
+                const isVerticalRepeat   = row > 0            && selectedGrid[col][row - 1] === t;
+                const isHorizontalRepeat = col > 0            && selectedGrid[col - 1][row] === t;
+                const isDiagLeft         = col > 0 && row > 0 && selectedGrid[col - 1][row - 1] === t;
+                const isDiagRight        = col < NUM_COLS - 1 && row > 0 && selectedGrid[col + 1][row - 1] === t;
 
-                if (!isVerticalRepeat && !isHorizontalRepeat && !isDiagLeftRepeat && !isDiagRightRepeat) {
+                if (!isVerticalRepeat && !isHorizontalRepeat && !isDiagLeft && !isDiagRight) {
                   chosenIdx = i;
                   break;
                 }
               }
 
-              // 2. If not found, relax diagonal constraints
+              // 2. Relax diagonal constraints
               if (chosenIdx === -1) {
                 for (let i = poolIdx; i < pool.length; i++) {
                   const t = pool[i];
-                  const isVerticalRepeat = row > 0 && selectedGrid[col][row - 1] === t;
+                  const isVerticalRepeat   = row > 0 && selectedGrid[col][row - 1] === t;
                   const isHorizontalRepeat = col > 0 && selectedGrid[col - 1][row] === t;
-
-                  if (!isVerticalRepeat && !isHorizontalRepeat) {
-                    chosenIdx = i;
-                    break;
-                  }
+                  if (!isVerticalRepeat && !isHorizontalRepeat) { chosenIdx = i; break; }
                 }
               }
 
-              // 3. If still not found, relax horizontal constraint (prevent same-column vertical adjacency)
+              // 3. Only vertical constraint
               if (chosenIdx === -1) {
                 for (let i = poolIdx; i < pool.length; i++) {
-                  const t = pool[i];
-                  const isVerticalRepeat = row > 0 && selectedGrid[col][row - 1] === t;
-
-                  if (!isVerticalRepeat) {
-                    chosenIdx = i;
-                    break;
-                  }
+                  if (row === 0 || selectedGrid[col][row - 1] !== pool[i]) { chosenIdx = i; break; }
                 }
               }
 
-              // 4. Fallback to the first available index in the pool if all else fails
-              if (chosenIdx === -1) {
-                chosenIdx = poolIdx;
-              }
+              // 4. Fallback
+              if (chosenIdx === -1) chosenIdx = poolIdx;
 
-              // Swap pool[poolIdx] with pool[chosenIdx] to commit the choice
+              // Commit: swap chosen to front, record assignment
               const temp = pool[poolIdx];
               pool[poolIdx] = pool[chosenIdx];
               pool[chosenIdx] = temp;
-
               selectedGrid[col][row] = pool[poolIdx];
             } else {
               selectedGrid[col][row] = 0;
@@ -339,22 +330,21 @@
           }
         }
 
-        const colHeight_mm = plankH_mm * planksNeeded;
+        // Render columns with mm-based sizing (avoids print % resolution bugs)
+        const colWidth_mm = 105 / NUM_COLS;
+        const totalColH_mm = plankH_mm * planksNeeded;
 
         for (let col = 0; col < NUM_COLS; col++) {
-          const colLeft = (col * 100 / NUM_COLS).toFixed(4);
-          const colWidthPercent = colW.toFixed(4);
+          const colLeft_mm = col * colWidth_mm;
+          const topOffset_mm = -((col * STAIR_STEP) % 1) * plankH_mm;
 
           const colEl = document.createElement('div');
-          // Linear stagger step to create the stair pattern
-          const topOffset_mm = -((col * STAIR_STEP) % 1) * plankH_mm;
-          
           colEl.style.cssText = [
             'position:absolute',
-            `left:${colLeft}%`,
-            `width:${colWidthPercent}%`,
-            `top:${topOffset_mm.toFixed(4)}mm`,
-            `height:${colHeight_mm.toFixed(4)}mm`,
+            `left:${colLeft_mm.toFixed(3)}mm`,
+            `width:${colWidth_mm.toFixed(3)}mm`,
+            `top:${topOffset_mm.toFixed(3)}mm`,
+            `height:${totalColH_mm.toFixed(3)}mm`,
             'display:flex',
             'flex-direction:column',
             'align-items:stretch',
@@ -362,11 +352,10 @@
           ].join(';');
 
           for (let i = 0; i < planksNeeded; i++) {
-            const tileIdx = selectedGrid[col][i];
-            const tile = tiles[tileIdx];
+            const tile = tiles[selectedGrid[col][i]];
 
             const plank = document.createElement('div');
-            plank.style.cssText = `flex-shrink:0; width:100%; height:${plankH_mm.toFixed(4)}mm; overflow:hidden;`;
+            plank.style.cssText = `flex-shrink:0; width:100%; height:${plankH_mm.toFixed(3)}mm; overflow:hidden;`;
 
             const img = document.createElement('img');
             img.src         = tile.src;
