@@ -31,7 +31,9 @@
 .card-trait-mark,
 .works,
 #grid,
-body > section {
+body > section,
+#print-page-back,
+#print-concrete-zone {
   display: none !important;
 }
 
@@ -68,6 +70,10 @@ html, body {
   break-after: avoid;
 }
 
+#print-page-back {
+  display: none !important;
+}
+
 /* ── Full-page SVG: vertical + horizontal + diagonal lines ───── */
 /* SVG vector strokes are guaranteed to print (unlike CSS         */
 /* background-color, which browsers may suppress).                */
@@ -86,7 +92,7 @@ html, body {
 /*    x: 105mm–210mm (right half)                                       */
 /*    y: 148.5mm–297mm (starts at horizontal divider)                     */
 #print-concrete-zone {
-  display: block !important;
+  display: none !important;
   position: absolute;
   left: 105mm;
   top: 148.5mm;
