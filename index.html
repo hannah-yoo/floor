@@ -13,7 +13,8 @@
     content="An archive of fake wood-grain flooring units collected from Korean residential and commercial product lines." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet"
+    href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="print.css" media="print" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -25,18 +26,69 @@
     <div id="grid"></div>
   </section>
 
-  <div id="loading">loading…</div>
+  <div id="loading">불러오는 중…</div>
   <div id="error" style="display:none"></div>
 
   <!-- Reveal All button -->
-  <button id="reveal-all-btn" class="knife-btn" title="Reveal All">
-    <img src="assets/image/knife.png" alt="Cutter" class="knife-img" />
+  <button id="reveal-all-btn" class="knife-btn" title="모두 보기">
+    <img src="assets/image/knife.png" alt="커터칼" class="knife-img" />
+    <span class="btn-label">모두 열어보기</span>
   </button>
 
   <!-- Print button -->
-  <button id="print-btn" class="print-btn-custom" title="Print Flooring">
-    <img src="assets/image/make flooring.png" alt="Make Flooring" class="print-btn-img" />
+  <button id="print-btn" class="print-btn-custom" title="장판 인쇄하기">
+    <img src="assets/image/make flooring.png" alt="장판 만들기" class="print-btn-img" />
+    <span class="btn-label">내 장판 만들기</span>
   </button>
+
+  <!-- Print Popover Menu -->
+  <div id="print-menu" class="print-menu-popover">
+    <p class="print-menu-title">어떤 형태로 가져가시겠어요?</p>
+    <div class="print-menu-options">
+      <button id="menu-print-btn" class="print-menu-opt-btn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round" viewBox="0 0 24 24">
+          <polyline points="6 9 6 2 18 2 18 9" />
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+          <rect x="6" y="14" width="12" height="8" />
+        </svg>
+        <span>인쇄하기 (A4 실물)</span>
+      </button>
+      <button id="menu-download-btn" class="print-menu-opt-btn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+          stroke-linejoin="round" viewBox="0 0 24 24">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        <span>이미지 저장 (배경화면)</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Print Preview Card -->
+  <div id="print-preview-card" class="print-preview-popover">
+    <div class="mini-a4">
+      <svg class="mini-lines" viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+        <line x1="105" y1="0" x2="105" y2="148.5" stroke="#aaa" stroke-width="0.5" stroke-dasharray="2 2" />
+        <line x1="105" y1="148.5" x2="105" y2="297" stroke="#aaa" stroke-width="0.5" />
+        <line x1="0" y1="148.5" x2="210" y2="148.5" stroke="#aaa" stroke-width="0.5" stroke-dasharray="2 2" />
+        <line x1="105" y1="148.5" x2="210" y2="253.5" stroke="#aaa" stroke-width="0.5" stroke-dasharray="2 2" />
+      </svg>
+      <div class="mini-floor-zone">
+        <div id="mini-floor-grid"></div>
+      </div>
+      <div class="mini-concrete-zone">
+        <img src="assets/image/concrete.jpg" alt="콘크리트" />
+      </div>
+      <div class="mini-doormat-zone">
+        <img id="mini-doormat-img" src="" alt="도어매트" />
+      </div>
+    </div>
+    <div class="mini-tag-footer">
+      <span>A4 도면 접기 (실물 미리보기)</span>
+    </div>
+  </div>
 
   <!-- Walking sound -->
   <audio id="walk-sound" src="assets/sound/walking.m4a" preload="auto"></audio>
@@ -54,28 +106,20 @@
     <div class="print-page" id="print-page-front">
       <!-- Single SVG covers full A4 — SVG strokes always print,
            unlike CSS background-color which browsers may strip.   -->
-      <svg id="print-lines" class="print-lines" viewBox="0 0 210 297"
-           xmlns="http://www.w3.org/2000/svg"
-           preserveAspectRatio="none">
+      <svg id="print-lines" class="print-lines" viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="none">
         <!-- Vertical dashed line at top half (x=105, y=0 to y=148.5) -->
-        <line x1="105" y1="0" x2="105" y2="148.5"
-              stroke="#000" stroke-width="0.5"
-              stroke-dasharray="10 8"
-              vector-effect="non-scaling-stroke" />
+        <line x1="105" y1="0" x2="105" y2="148.5" stroke="#000" stroke-width="0.5" stroke-dasharray="10 8"
+          vector-effect="non-scaling-stroke" />
         <!-- Vertical solid line at bottom half (x=105, y=148.5 to y=297) -->
-        <line x1="105" y1="148.5" x2="105" y2="297"
-              stroke="#000" stroke-width="0.5"
-              vector-effect="non-scaling-stroke" />
+        <line x1="105" y1="148.5" x2="105" y2="297" stroke="#000" stroke-width="0.5"
+          vector-effect="non-scaling-stroke" />
         <!-- Horizontal dashed line at y=148.5 (x=0 to x=210) -->
-        <line x1="0" y1="148.5" x2="210" y2="148.5"
-              stroke="#000" stroke-width="0.5"
-              stroke-dasharray="10 8"
-              vector-effect="non-scaling-stroke" />
+        <line x1="0" y1="148.5" x2="210" y2="148.5" stroke="#000" stroke-width="0.5" stroke-dasharray="10 8"
+          vector-effect="non-scaling-stroke" />
         <!-- Diagonal dashed line: centre-intersection (105,148.5) → right boundary at floor zone bottom height (210,253.5) -->
-        <line x1="105" y1="148.5" x2="210" y2="253.5"
-              stroke="#000" stroke-width="0.5"
-              stroke-dasharray="10 8"
-              vector-effect="non-scaling-stroke" />
+        <line x1="105" y1="148.5" x2="210" y2="253.5" stroke="#000" stroke-width="0.5" stroke-dasharray="10 8"
+          vector-effect="non-scaling-stroke" />
       </svg>
 
       <!-- Floor zone: square area bottom-left of the divider lines -->
@@ -105,74 +149,53 @@
       </div>
 
       <!-- SVG matching folding lines on front, mirrored horizontally -->
-      <svg id="print-lines-back" class="print-lines" viewBox="0 0 210 297"
-           xmlns="http://www.w3.org/2000/svg"
-           preserveAspectRatio="none">
+      <svg id="print-lines-back" class="print-lines" viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg"
+        preserveAspectRatio="none">
         <!-- Vertical dashed line at top half (x=105, y=0 to y=148.5) -->
-        <line x1="105" y1="0" x2="105" y2="148.5"
-              stroke="#000" stroke-width="0.5"
-              stroke-dasharray="10 8"
-              vector-effect="non-scaling-stroke" />
+        <line x1="105" y1="0" x2="105" y2="148.5" stroke="#000" stroke-width="0.5" stroke-dasharray="10 8"
+          vector-effect="non-scaling-stroke" />
         <!-- Vertical solid line at bottom half (x=105, y=148.5 to y=297) -->
-        <line x1="105" y1="148.5" x2="105" y2="297"
-              stroke="#000" stroke-width="0.5"
-              vector-effect="non-scaling-stroke" />
+        <line x1="105" y1="148.5" x2="105" y2="297" stroke="#000" stroke-width="0.5"
+          vector-effect="non-scaling-stroke" />
         <!-- Horizontal dashed line at y=148.5 (x=0 to x=210) -->
-        <line x1="0" y1="148.5" x2="210" y2="148.5"
-              stroke="#000" stroke-width="0.5"
-              stroke-dasharray="10 8"
-              vector-effect="non-scaling-stroke" />
+        <line x1="0" y1="148.5" x2="210" y2="148.5" stroke="#000" stroke-width="0.5" stroke-dasharray="10 8"
+          vector-effect="non-scaling-stroke" />
         <!-- Diagonal dashed line: centre-intersection (105,148.5) → left boundary at floor zone bottom height (0,253.5) [Mirrored] -->
-        <line x1="105" y1="148.5" x2="0" y2="253.5"
-              stroke="#000" stroke-width="0.5"
-              stroke-dasharray="10 8"
-              vector-effect="non-scaling-stroke" />
+        <line x1="105" y1="148.5" x2="0" y2="253.5" stroke="#000" stroke-width="0.5" stroke-dasharray="10 8"
+          vector-effect="non-scaling-stroke" />
       </svg>
     </div>
 
   </div>
 
   <!-- Info Toggle & Panel -->
-  <button id="info-toggle" aria-label="Info">
-    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24">
-      <circle cx="12" cy="12" r="10"/>
-      <line x1="12" y1="16" x2="12" y2="11"/>
-      <line x1="12" y1="8" x2="12.01" y2="8"/>
-    </svg>
+  <button id="info-toggle" aria-label="정보">
+    <img src="assets/image/info buton.webp" alt="정보" class="info-btn-img" />
+    <span class="btn-label">자세히 알아보기</span>
   </button>
   <div id="info-panel">
-    <button id="info-close" aria-label="Close panel" style="color:#fff;">&times;</button>
+    <button id="info-close" aria-label="패널 닫기" style="color:#fff;">&times;</button>
     <div class="tag-header">
-      <span class="tag-title">ABOUT ARCHIVE</span>
+      <span class="tag-title">자세히 알아보기</span>
     </div>
     <div class="tag-body">
       <div class="tag-row">
-        <p>This archive explores the aesthetic gap between the luxury names given to commercial flooring and their
-          synthetic reality.</p>
+        <p>일상적인 장판에 붙여진 고급스러운 이름들과 밍숭맹숭한 실물 사이의 괴리를 아카이빙합니다.</p>
       </div>
       <div class="tag-row">
-        <strong>Credits</strong>
+        <strong>출처와 크레딧</strong>
         <span>
-          Flooring Data: <a href="https://www.lxhausys.com" target="_blank">LX Hausys</a>, <a href="https://www.kcc.co.kr" target="_blank">KCC</a>, <a href="https://www.hyundailnc.com" target="_blank">Hyundai L&amp;C</a>.<br>
-          Images: <a href="https://commons.wikimedia.org/" target="_blank">Wikimedia Commons</a>
+          장판 데이터: <a href="https://www.lxhausys.com" target="_blank">LX하우시스</a>, <a href="https://www.kcc.co.kr"
+            target="_blank">KCC</a>, <a href="https://www.hyundailnc.com" target="_blank">현대L&amp;C</a>.<br>
+          이미지: <a href="https://commons.wikimedia.org/" target="_blank">위키미디어 커먼즈</a>
         </span>
       </div>
       <div class="tag-row">
-        <strong>Usage</strong>
-        <span>Click tiles to reveal. Drag to reorder.</span>
+        <strong>탐색 방법</strong>
+        <span>타일을 클릭해 장판 이름들의 이미지 검색 결과를 걷어내고 실제 장판을 확인하세요. 드래그해서 원하는 위치로 배열하고, 결과물을 가져갈 수도 있습니다.</span>
       </div>
     </div>
   </div>
-
-  <!-- Download button -->
-  <button id="download-btn" title="Download My View" aria-label="Download Viewport">
-    <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-      stroke-linejoin="round" viewBox="0 0 24 24">
-      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-      <polyline points="7 10 12 15 17 10" />
-      <line x1="12" y1="15" x2="12" x2="3" />
-    </svg>
-  </button>
 
   <script>
     // ─────────────────────────────────────────────────────────────
@@ -181,33 +204,60 @@
     (function () {
 
       // ── Step 1: collect visible wood-tile images from the current viewport ──
+      let cachedTiles = [];
       function getVisibleTileSrcs() {
         const grid = document.getElementById('grid');
-        if (!grid) return [];
+        if (!grid) return cachedTiles;
+        
+        const gridRect = grid.getBoundingClientRect();
+        const isHidden = (gridRect.width === 0 && gridRect.height === 0);
+
+        // If hidden and cache is populated, return cache
+        if (isHidden && cachedTiles.length > 0) {
+          return cachedTiles;
+        }
+
         const vw = window.innerWidth;
         const vh = window.innerHeight;
-        return Array.from(grid.querySelectorAll('.card'))
+        let tiles = Array.from(grid.querySelectorAll('.card'))
           .filter(card => {
+            // When hidden during printing, don't filter by viewport
+            if (isHidden) return true;
             const r = card.getBoundingClientRect();
             return r.top < vh && r.bottom > 0 && r.left < vw && r.right > 0;
           })
           .map(card => {
-            const img  = card.querySelector('.card-wood-img');
+            const img = card.querySelector('.card-wood-img');
             if (!img) return null;
             const src = img.getAttribute('src');
             if (!src || src.trim() === '') return null;
-            // Capture the tile's natural aspect ratio (height/width) so planks
-            // stay tall & narrow like real flooring, not square
             const r = card.getBoundingClientRect();
-            const ar = r.width > 0 ? r.height / r.width : 2.5; // height:width ratio
+            const ar = r.width > 0 ? r.height / r.width : 2.5;
             return { src: src, alt: img.alt || '', ar };
           })
           .filter(Boolean);
+
+        if (tiles.length > 0) {
+          cachedTiles = tiles;
+        } else if (isHidden && cachedTiles.length === 0) {
+          // Absolute fallback if cache is empty during print: pull all card images
+          tiles = Array.from(grid.querySelectorAll('.card'))
+            .map(card => {
+              const img = card.querySelector('.card-wood-img');
+              if (!img) return null;
+              const src = img.getAttribute('src');
+              if (!src || src.trim() === '') return null;
+              return { src: src, alt: img.alt || '', ar: 2.5 };
+            })
+            .filter(Boolean);
+          cachedTiles = tiles;
+        }
+        return tiles;
       }
 
       // ── Step 2: build the flooring mosaic in the print zone ─────────────────
       function buildFloorGrid(tiles) {
-        const zone   = document.getElementById('print-floor-zone');
+        const zone = document.getElementById('print-floor-zone');
         const gridEl = document.getElementById('print-floor-grid');
         if (!zone || !gridEl) return;
         gridEl.innerHTML = '';
@@ -263,7 +313,7 @@
         // Deterministic LCG seeded random number generator
         function seededRandomGenerator(seed) {
           let s = seed;
-          return function() {
+          return function () {
             s = (s * 9301 + 49297) % 233280;
             return s / 233280;
           };
@@ -287,10 +337,10 @@
               // 1. Full adjacency constraints (vertical + horizontal + diagonal)
               for (let i = poolIdx; i < pool.length; i++) {
                 const t = pool[i];
-                const isVerticalRepeat   = row > 0            && selectedGrid[col][row - 1] === t;
-                const isHorizontalRepeat = col > 0            && selectedGrid[col - 1][row] === t;
-                const isDiagLeft         = col > 0 && row > 0 && selectedGrid[col - 1][row - 1] === t;
-                const isDiagRight        = col < NUM_COLS - 1 && row > 0 && selectedGrid[col + 1][row - 1] === t;
+                const isVerticalRepeat = row > 0 && selectedGrid[col][row - 1] === t;
+                const isHorizontalRepeat = col > 0 && selectedGrid[col - 1][row] === t;
+                const isDiagLeft = col > 0 && row > 0 && selectedGrid[col - 1][row - 1] === t;
+                const isDiagRight = col < NUM_COLS - 1 && row > 0 && selectedGrid[col + 1][row - 1] === t;
 
                 if (!isVerticalRepeat && !isHorizontalRepeat && !isDiagLeft && !isDiagRight) {
                   chosenIdx = i;
@@ -302,7 +352,7 @@
               if (chosenIdx === -1) {
                 for (let i = poolIdx; i < pool.length; i++) {
                   const t = pool[i];
-                  const isVerticalRepeat   = row > 0 && selectedGrid[col][row - 1] === t;
+                  const isVerticalRepeat = row > 0 && selectedGrid[col][row - 1] === t;
                   const isHorizontalRepeat = col > 0 && selectedGrid[col - 1][row] === t;
                   if (!isVerticalRepeat && !isHorizontalRepeat) { chosenIdx = i; break; }
                 }
@@ -358,8 +408,8 @@
             plank.style.cssText = `flex-shrink:0; width:100%; height:${plankH_mm.toFixed(3)}mm; overflow:hidden;`;
 
             const img = document.createElement('img');
-            img.src         = tile.src;
-            img.alt         = tile.alt || '';
+            img.src = tile.src;
+            img.alt = tile.alt || '';
             img.crossOrigin = 'anonymous';
             img.style.cssText = 'display:block; width:100%; height:100%; object-fit:cover; object-position:center;';
 
@@ -370,6 +420,13 @@
           gridEl.appendChild(colEl);
         }
       }
+
+      window.getVisibleTileSrcs = getVisibleTileSrcs;
+
+      // Keep cache updated on scroll
+      window.addEventListener('scroll', () => {
+        getVisibleTileSrcs();
+      });
 
       window.addEventListener('beforeprint', () => {
         const tiles = getVisibleTileSrcs();
@@ -409,7 +466,7 @@
     const FIELDS = {
       nameKo: "장판 이름 (한글)",
       nameEn: "장판 이름 (영어)",
-      image: "사진",
+      image: "사진 image",
       unitSize: "나무판 유닛 1개 너비",
       maxRepeat: "똑같은 디자인이 반복되지 않는 최대 크기",
       density: "단위무늬당 유닛 밀도",
@@ -423,12 +480,142 @@
 
     let isGlobalRevealed = false;
 
+    // ── build the flooring mosaic in the print preview zone ───────────────
+    function buildMiniFloorGrid(tiles) {
+      const gridEl = document.getElementById('mini-floor-grid');
+      if (!gridEl) return;
+      gridEl.innerHTML = '';
+      if (tiles.length === 0) return;
+
+      const NUM_COLS = 8;
+      const STAIR_STEP = 0.25;
+
+      let totalAR = 0;
+      tiles.forEach(t => { totalAR += t.ar || 2.5; });
+      const avgAR = tiles.length > 0 ? (totalAR / tiles.length) : 2.5;
+      const arFactor = Math.max(avgAR * 2.8, 8.0);
+
+      const colW_pct = 100 / NUM_COLS;
+      const containerWidth = gridEl.getBoundingClientRect().width || 77.5;
+      const colWidth_px = containerWidth / NUM_COLS;
+      const plankH_px = colWidth_px * arFactor;
+      const maxStagger_px = 0.75 * plankH_px;
+      const planksNeeded = Math.ceil((gridEl.getBoundingClientRect().height || 77.5) / plankH_px) + 2;
+
+      gridEl.style.cssText = 'position:relative; width:100%; height:100%; overflow:hidden;';
+
+      const selectedGrid = [];
+      for (let col = 0; col < NUM_COLS; col++) {
+        selectedGrid[col] = [];
+      }
+
+      const totalCells = NUM_COLS * planksNeeded;
+      const pool = [];
+      for (let i = 0; i < totalCells; i++) {
+        pool.push(i % tiles.length);
+      }
+
+      function seededRandomGenerator(seed) {
+        let s = seed;
+        return function() {
+          s = (s * 9301 + 49297) % 233280;
+          return s / 233280;
+        };
+      }
+      const rand = seededRandomGenerator(12345);
+      for (let i = pool.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        const temp = pool[i];
+        pool[i] = pool[j];
+        pool[j] = temp;
+      }
+
+      let poolIdx = 0;
+      for (let row = 0; row < planksNeeded; row++) {
+        for (let col = 0; col < NUM_COLS; col++) {
+          let chosenIdx = -1;
+          if (tiles.length > 1) {
+            for (let i = poolIdx; i < pool.length; i++) {
+              const t = pool[i];
+              const isVerticalRepeat   = row > 0            && selectedGrid[col][row - 1] === t;
+              const isHorizontalRepeat = col > 0            && selectedGrid[col - 1][row] === t;
+              const isDiagLeft         = col > 0 && row > 0 && selectedGrid[col - 1][row - 1] === t;
+              const isDiagRight        = col < NUM_COLS - 1 && row > 0 && selectedGrid[col + 1][row - 1] === t;
+
+              if (!isVerticalRepeat && !isHorizontalRepeat && !isDiagLeft && !isDiagRight) {
+                chosenIdx = i;
+                break;
+              }
+            }
+            if (chosenIdx === -1) {
+              for (let i = poolIdx; i < pool.length; i++) {
+                const t = pool[i];
+                const isVerticalRepeat   = row > 0 && selectedGrid[col][row - 1] === t;
+                const isHorizontalRepeat = col > 0 && selectedGrid[col - 1][row] === t;
+                if (!isVerticalRepeat && !isHorizontalRepeat) { chosenIdx = i; break; }
+              }
+            }
+            if (chosenIdx === -1) {
+              for (let i = poolIdx; i < pool.length; i++) {
+                if (row === 0 || selectedGrid[col][row - 1] !== pool[i]) { chosenIdx = i; break; }
+              }
+            }
+            if (chosenIdx === -1) chosenIdx = poolIdx;
+
+            const temp = pool[poolIdx];
+            pool[poolIdx] = pool[chosenIdx];
+            pool[chosenIdx] = temp;
+            selectedGrid[col][row] = pool[poolIdx];
+          } else {
+            selectedGrid[col][row] = 0;
+          }
+          poolIdx++;
+        }
+      }
+
+      for (let col = 0; col < NUM_COLS; col++) {
+        const colLeft_pct = col * colW_pct;
+        const topOffset_px = -((col * STAIR_STEP) % 1) * plankH_px;
+        const totalColH_px = plankH_px * planksNeeded;
+
+        const colEl = document.createElement('div');
+        colEl.style.cssText = [
+          'position:absolute',
+          `left:${colLeft_pct.toFixed(3)}%`,
+          `width:${colW_pct.toFixed(3)}%`,
+          `top:${topOffset_px.toFixed(3)}px`,
+          `height:${totalColH_px.toFixed(3)}px`,
+          'display:flex',
+          'flex-direction:column',
+          'align-items:stretch',
+          'overflow:visible',
+        ].join(';');
+
+        for (let i = 0; i < planksNeeded; i++) {
+          const tile = tiles[selectedGrid[col][i]];
+
+          const plank = document.createElement('div');
+          plank.style.cssText = `flex-shrink:0; width:100%; height:${plankH_px.toFixed(3)}px; overflow:hidden;`;
+
+          const img = document.createElement('img');
+          img.src = tile.src;
+          img.alt = tile.alt || '';
+          img.style.cssText = 'display:block; width:100%; height:100%; object-fit:cover; object-position:center;';
+
+          plank.appendChild(img);
+          colEl.appendChild(plank);
+        }
+        gridEl.appendChild(colEl);
+      }
+    }
+
+
     // Walking sound helper — single play
     function playWalkSound() {
       const snd = document.getElementById("walk-sound");
       if (!snd) return;
       snd.currentTime = 0;
-      snd.play().catch(() => {});
+      snd.play().catch(() => { });
     }
 
     // Walking sound helper — rapid staccato for reveal-all
@@ -443,7 +630,7 @@
         setTimeout(() => {
           const clone = snd.cloneNode();
           clone.volume = 0.4;
-          clone.play().catch(() => {});
+          clone.play().catch(() => { });
         }, i * interval);
       }
     }
@@ -735,8 +922,8 @@
       grid.addEventListener("pointerdown", e => {
         if (e.pointerType === "mouse" && e.button !== 0) return;
         if (e.target.closest("#info-toggle") || e.target.closest("#info-panel") ||
-            e.target.closest("#download-btn") || e.target.closest("#reveal-all-btn") ||
-            e.target.closest("#print-btn")) return;
+          e.target.closest("#download-btn") || e.target.closest("#reveal-all-btn") ||
+          e.target.closest("#print-btn")) return;
 
         const card = e.target.closest(".card");
         if (!card) return;
@@ -760,7 +947,7 @@
           ev.preventDefault();
           if (clone) {
             clone.style.left = (ev.clientX - cloneOffX) + "px";
-            clone.style.top  = (ev.clientY - cloneOffY) + "px";
+            clone.style.top = (ev.clientY - cloneOffY) + "px";
           }
           // Highlight target
           grid.querySelectorAll(".card-ghost").forEach(c => c.classList.remove("card-ghost"));
@@ -772,7 +959,7 @@
 
         function onUp(ev) {
           window.removeEventListener("pointermove", onMove);
-          window.removeEventListener("pointerup",   onUp);
+          window.removeEventListener("pointerup", onUp);
           if (dragStarted) {
             grid.querySelectorAll(".card-ghost").forEach(c => c.classList.remove("card-ghost"));
             if (clone) clone.style.display = "none";
@@ -787,7 +974,7 @@
           }
         }
         window.addEventListener("pointermove", onMove, { passive: false });
-        window.addEventListener("pointerup",   onUp);
+        window.addEventListener("pointerup", onUp);
       });
     }
 
@@ -828,66 +1015,109 @@
         });
       }
 
-      // Print button click
+      // Print button click (Toggles Popover Menu)
       const printBtn = document.getElementById("print-btn");
-      if (printBtn) {
+      const printMenu = document.getElementById("print-menu");
+      if (printBtn && printMenu) {
         printBtn.addEventListener("click", (e) => {
           e.stopPropagation();
+          printMenu.classList.toggle("show");
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener("click", (e) => {
+          if (!printMenu.contains(e.target) && e.target !== printBtn) {
+            printMenu.classList.remove("show");
+          }
+        });
+      }
+
+      // Print Popover Option Buttons
+      const menuPrintBtn = document.getElementById("menu-print-btn");
+      const menuDownloadBtn = document.getElementById("menu-download-btn");
+      const printPreviewCard = document.getElementById("print-preview-card");
+
+      if (menuPrintBtn && printPreviewCard) {
+        menuPrintBtn.addEventListener("mouseenter", () => {
+          const tiles = getVisibleTileSrcs();
+          buildMiniFloorGrid(tiles);
+          
+          const doormatImg = document.getElementById('mini-doormat-img');
+          if (doormatImg && !doormatImg.getAttribute('src')) {
+            const doormats = [
+              'assets/image/green doormat.jpg',
+              'assets/image/red doormat.jpg'
+            ];
+            const chosen = doormats[Math.floor(Math.random() * doormats.length)];
+            doormatImg.src = chosen;
+          }
+          printPreviewCard.classList.add("show");
+        });
+        menuPrintBtn.addEventListener("mouseleave", () => {
+          printPreviewCard.classList.remove("show");
+        });
+        menuPrintBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          printMenu.classList.remove("show");
           window.print();
         });
       }
 
-      // Download logic
-      const dlBtn = document.getElementById("download-btn");
-      dlBtn.addEventListener("mouseenter", () => {
-        updateExportTag();
-        const tag = document.getElementById("export-tag");
-        if (tag) tag.classList.add("show");
-      });
-      dlBtn.addEventListener("mouseleave", () => {
-        const tag = document.getElementById("export-tag");
-        if (tag) tag.classList.remove("show");
-      });
+      if (menuDownloadBtn) {
+        menuDownloadBtn.addEventListener("mouseenter", () => {
+          updateExportTag();
+          const tag = document.getElementById("export-tag");
+          if (tag) tag.classList.add("show");
+        });
+        menuDownloadBtn.addEventListener("mouseleave", () => {
+          const tag = document.getElementById("export-tag");
+          if (tag) tag.classList.remove("show");
+        });
+        menuDownloadBtn.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          printMenu.classList.remove("show");
 
-      dlBtn.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        dlBtn.style.display = "none";
-        infoBtn.style.display = "none";
-        if (printBtn) printBtn.style.display = "none";
+          // Hide all control buttons during screenshot
+          if (revealAllBtn) revealAllBtn.style.display = "none";
+          if (infoBtn) infoBtn.style.display = "none";
+          if (printBtn) printBtn.style.display = "none";
 
-        const tag = document.getElementById("export-tag");
-        if (tag) {
-          tag.classList.add("show");
-          tag.style.transition = "none";
-        }
+          const tag = document.getElementById("export-tag");
+          if (tag) {
+            tag.classList.add("show");
+            tag.style.transition = "none";
+          }
 
-        try {
-          const canvas = await html2canvas(document.body, {
-            y: window.scrollY,
-            x: 0,
-            width: window.innerWidth,
-            height: window.innerHeight,
-            backgroundColor: "#0a0a0a",
-            useCORS: true,
-            scale: 2
-          });
-          const link = document.createElement("a");
-          link.download = `jangpan-collection-${Date.now()}.jpg`;
-          link.href = canvas.toDataURL("image/jpeg", 0.95);
-          link.click();
-        } catch (err) {
-          console.error("Screenshot failed:", err);
-          alert("다운로드 중 오류가 발생했습니다.");
-        }
+          try {
+            const canvas = await html2canvas(document.body, {
+              y: window.scrollY,
+              x: 0,
+              width: window.innerWidth,
+              height: window.innerHeight,
+              backgroundColor: "#0a0a0a",
+              useCORS: true,
+              scale: 2
+            });
+            const link = document.createElement("a");
+            link.download = `jangpan-collection-${Date.now()}.jpg`;
+            link.href = canvas.toDataURL("image/jpeg", 0.95);
+            link.click();
+          } catch (err) {
+            console.error("Screenshot failed:", err);
+            alert("다운로드 중 오류가 발생했습니다.");
+          }
 
-        dlBtn.style.display = "flex";
-        infoBtn.style.display = "flex";
-        if (printBtn) printBtn.style.display = "flex";
-        if (tag) {
-          tag.classList.remove("show");
-          tag.style.transition = "";
-        }
-      });
+          // Restore control buttons
+          if (revealAllBtn) revealAllBtn.style.display = "flex";
+          if (infoBtn) infoBtn.style.display = "flex";
+          if (printBtn) printBtn.style.display = "flex";
+
+          if (tag) {
+            tag.classList.remove("show");
+            tag.style.transition = "";
+          }
+        });
+      }
 
       try {
         const records = await fetchAirtable();
@@ -900,10 +1130,10 @@
           const bSeries = b.fields[FIELDS.series] || "";
           const aIsHiRes = hiResSeries.some(s => aSeries.includes(s));
           const bIsHiRes = hiResSeries.some(s => bSeries.includes(s));
-          
+
           if (aIsHiRes && !bIsHiRes) return -1;
           if (!aIsHiRes && bIsHiRes) return 1;
-          
+
           // Maintain randomness within groups
           return Math.random() - 0.5;
         });
@@ -919,6 +1149,11 @@
         });
 
         initDragSwap(grid);
+
+        // Trigger initial tile caching once cards are rendered
+        if (typeof window.getVisibleTileSrcs === 'function') {
+          window.getVisibleTileSrcs();
+        }
       } catch (err) {
         loading.style.display = "none";
         console.error(err);
